@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package delicious.v1;
+
+option go_package = "github.com/delicious/delicious/api/gen/delicious/v1;deliciousv1";
+
+import "google/protobuf/timestamp.proto";
+import "delicious/v1/recipe.proto";
+
+// ---------------------------------------------------------------------------
+// 看板服务：Web PC 管理端数据总览
+// ---------------------------------------------------------------------------
+
+service DashboardService {
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+
+  // 带完整版本时间轴的详情（PC 端穿透）
+  rpc GetRecipeTimeline(GetRecipeTimelineRequest) returns (GetRecipeTimelineResponse);
+}
+
+message GetStatsRequest {
+  uint64 user_id = 1;
+}
+
+message RatingDistribution {
+  uint32 rating = 1;  // 1-5
+  int64 count = 2;
+}
+
+message GetStatsResponse {
+  int64 total_recipes = 1;
+  double average_rating = 2;
+  int64 total_versions = 3;
+  repeated RatingDistribution rating_distribution = 4;
+  google.protobuf.Timestamp latest_recipe_at = 5;
+}
+
+message TimelineNode {
+  uint64 version_id = 1;
+  uint32 version_number = 2;
+  string commit_msg = 3;
+  google.protobuf.Timestamp created_at = 4;
+  bool is_current = 5;
+}
+
+message GetRecipeTimelineRequest {
+  uint64 recipe_id = 1;
+  uint64 user_id = 2;
+}
+
+message GetRecipeTimelineResponse {
+  MyRecipe recipe = 1;
+  repeated TimelineNode timeline = 2;
+}

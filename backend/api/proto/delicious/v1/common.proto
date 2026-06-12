@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package delicious.v1;
+
+option go_package = "github.com/delicious/delicious/api/gen/delicious/v1;deliciousv1";
+
+import "google/protobuf/timestamp.proto";
+
+// ---------------------------------------------------------------------------
+// 公共类型（与 DB JSON 字段一一对应）
+// ---------------------------------------------------------------------------
+
+message Ingredient {
+  string name = 1;
+  double amount = 2;
+  string unit = 3;
+  string note = 4;
+}
+
+message ProcessStep {
+  int32 order = 1;
+  string content = 2;
+  optional int32 duration_minutes = 3;
+  optional string image_url = 4;
+}
+
+message Pagination {
+  int32 page = 1;       // 从 1 开始
+  int32 page_size = 2;  // 默认 20，最大 100
+}
+
+message PageInfo {
+  int32 page = 1;
+  int32 page_size = 2;
+  int64 total = 3;
+  int32 total_pages = 4;
+}
+
+// ---------------------------------------------------------------------------
+// Diff 结果（版本对比 / 百科对比共用）
+// ---------------------------------------------------------------------------
+
+enum DiffType {
+  DIFF_TYPE_UNSPECIFIED = 0;
+  DIFF_TYPE_UNCHANGED = 1;
+  DIFF_TYPE_ADDED = 2;
+  DIFF_TYPE_REMOVED = 3;
+  DIFF_TYPE_MODIFIED = 4;
+}
+
+message IngredientDiff {
+  DiffType type = 1;
+  Ingredient base = 2;    // 基准侧（左/旧/百科）
+  Ingredient target = 3;  // 对比侧（右/新/我的）
+  // 仅 MODIFIED 时有值
+  optional double amount_delta = 4;
+}
+
+message ProcessStepDiff {
+  DiffType type = 1;
+  int32 order = 2;
+  ProcessStep base = 3;
+  ProcessStep target = 4;
+}
+
+message VersionDiffResult {
+  repeated IngredientDiff ingredient_diffs = 1;
+  repeated ProcessStepDiff process_diffs = 2;
+  string summary = 3;  // 如 "修改 2 项配料，新增 1 个步骤"
+}

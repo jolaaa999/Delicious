@@ -1,0 +1,170 @@
+# =============================================================================
+# 人间烟火 API 网关路由表
+# 对外 RESTful，内部转发 gRPC
+# Base URL: /api/v1
+# =============================================================================
+
+gateway:
+  prefix: /api/v1
+  cors:
+    allow_origins: ["*"]
+    allow_methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+    allow_headers: [Authorization, Content-Type]
+  auth:
+  middleware: jwt  # Bearer Token，解析 user_id 注入 context
+
+# -----------------------------------------------------------------------------
+# 百科（EncyclopediaService）— H5「找灵感」
+# -----------------------------------------------------------------------------
+routes:
+  - method: GET
+    path: /encyclopedia/search
+    grpc_service: delicious.v1.EncyclopediaService
+    grpc_method: SearchRecipes
+    query_mapping:
+      keyword: keyword
+      page: pagination.page
+      page_size: pagination.page_size
+      category: category
+
+  - method: GET
+    path: /encyclopedia/{id}
+    grpc_service: delicious.v1.EncyclopediaService
+    grpc_method: GetRecipe
+    path_mapping:
+      id: id
+
+  - method: GET
+    path: /encyclopedia/category/{category}
+    grpc_service: delicious.v1.EncyclopediaService
+    grpc_method: ListByCategory
+    path_mapping:
+      category: category
+    query_mapping:
+      page: pagination.page
+      page_size: pagination.page_size
+
+# -----------------------------------------------------------------------------
+# 我的菜谱（RecipeService）— H5「我的厨房」+ PC 管理
+# -----------------------------------------------------------------------------
+  - method: POST
+    path: /recipes
+    grpc_service: delicious.v1.RecipeService
+    grpc_method: CreateRecipe
+    body: json
+
+  - method: GET
+    path: /recipes
+    grpc_service: delicious.v1.RecipeService
+    grpc_method: ListRecipes
+    query_mapping:
+      page: pagination.page
+      page_size: pagination.page_size
+      min_rating: min_rating
+      max_rating: max_rating
+      created_after: created_after
+      created_before: created_before
+      keyword: keyword
+      order_by: order_by
+      desc: desc
+
+  - method: GET
+    path: /recipes/{id}
+    grpc_service: delicious.v1.RecipeService
+    grpc_method: GetRecipe
+    path_mapping:
+      id: id
+
+  - method: PUT
+    path: /recipes/{id}
+    grpc_service: delicious.v1.RecipeService
+    grpc_method: UpdateRecipe
+    path_mapping:
+      id: id
+    body: json
+    note: 版本化更新，commit_msg 必填
+
+  - method: DELETE
+    path: /recipes/{id}
+    grpc_service: delicious.v1.RecipeService
+    grpc_method: DeleteRecipe
+    path_mapping:
+      id: id
+
+# -----------------------------------------------------------------------------
+# 版本控制与 Diff
+# -----------------------------------------------------------------------------
+  - method: GET
+    path: /recipes/{id}/versions
+    grpc_service: delicious.v1.RecipeService
+    grpc_method: ListVersions
+    path_mapping:
+      id: recipe_id
+
+  - method: GET
+    path: /recipes/{id}/versions/{version_id}
+    grpc_service: delicious.v1.RecipeService
+    grpc_method: GetVersion
+    path_mapping:
+      id: recipe_id
+      version_id: version_id
+
+  - method: GET
+    path: /recipes/{id}/diff
+    grpc_service: delicious.v1.RecipeService
+    grpc_method: CompareVersions
+    path_mapping:
+      id: recipe_id
+    query_mapping:
+      base_version_id: base_version_id
+      target_version_id: target_version_id
+    note: 版本对比，默认 target=current
+
+  - method: GET
+    path: /recipes/{id}/diff/encyclopedia
+    grpc_service: delicious.v1.RecipeService
+    grpc_method: CompareWithEncyclopedia
+    path_mapping:
+      id: recipe_id
+    query_mapping:
+      encyclopedia_recipe_id: encyclopedia_recipe_id
+
+# -----------------------------------------------------------------------------
+# 看板（DashboardService）— Web PC 管理端
+# -----------------------------------------------------------------------------
+  - method: GET
+    path: /dashboard/stats
+    grpc_service: delicious.v1.DashboardService
+    grpc_method: GetStats
+
+  - method: GET
+    path: /dashboard/recipes/{id}/timeline
+    grpc_service: delicious.v1.DashboardService
+    grpc_method: GetRecipeTimeline
+    path_mapping:
+      id: recipe_id
+
+# -----------------------------------------------------------------------------
+# 微服务部署与 gRPC 端点（内网）
+# -----------------------------------------------------------------------------
+services:
+  recipe:
+    host: recipe-service
+    port: 50051
+    implements: delicious.v1.RecipeService
+
+  encyclopedia:
+    host: encyclopedia-service
+    port: 50052
+    implements: delicious.v1.EncyclopediaService
+
+  dashboard:
+    host: dashboard-service
+    port: 50053
+    implements: delicious.v1.DashboardService
+    note: 可与 recipe-service 合并部署，独立 proto 便于 PC 端聚合
+
+  gateway:
+    host: api-gateway
+    port: 8080
+    protocol: http

@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package delicious.v1;
+
+option go_package = "github.com/delicious/delicious/api/gen/delicious/v1;deliciousv1";
+
+import "google/protobuf/timestamp.proto";
+import "delicious/v1/common.proto";
+
+// ---------------------------------------------------------------------------
+// 百科服务：找灵感搜索与详情
+// ---------------------------------------------------------------------------
+
+service EncyclopediaService {
+  // 关键词搜索（H5 找灵感页）
+  rpc SearchRecipes(SearchEncyclopediaRequest) returns (SearchEncyclopediaResponse);
+
+  // 百科详情
+  rpc GetRecipe(GetEncyclopediaRequest) returns (GetEncyclopediaResponse);
+
+  // 按分类浏览
+  rpc ListByCategory(ListByCategoryRequest) returns (ListByCategoryResponse);
+}
+
+message EncyclopediaRecipe {
+  uint64 id = 1;
+  string name = 2;
+  string description = 3;
+  string cover_image_url = 4;
+  string category = 5;
+  repeated string tags = 6;
+  repeated Ingredient ingredients = 7;
+  repeated ProcessStep process_steps = 8;
+  string source = 9;
+  uint32 view_count = 10;
+  google.protobuf.Timestamp created_at = 11;
+}
+
+message EncyclopediaListItem {
+  uint64 id = 1;
+  string name = 2;
+  string cover_image_url = 3;
+  string category = 4;
+  repeated string tags = 5;
+  string description = 6;
+}
+
+// ---- Search ----
+
+message SearchEncyclopediaRequest {
+  string keyword = 1;
+  Pagination pagination = 2;
+  string category = 3;  // 可选分类过滤
+}
+
+message SearchEncyclopediaResponse {
+  repeated EncyclopediaListItem items = 1;
+  PageInfo page_info = 2;
+}
+
+// ---- Get ----
+
+message GetEncyclopediaRequest {
+  uint64 id = 1;
+}
+
+message GetEncyclopediaResponse {
+  EncyclopediaRecipe recipe = 1;
+}
+
+// ---- Category ----
+
+message ListByCategoryRequest {
+  string category = 1;
+  Pagination pagination = 2;
+}
+
+message ListByCategoryResponse {
+  repeated EncyclopediaListItem items = 1;
+  PageInfo page_info = 2;
+}

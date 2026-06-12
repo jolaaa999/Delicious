@@ -1,0 +1,213 @@
+syntax = "proto3";
+
+package delicious.v1;
+
+option go_package = "github.com/delicious/delicious/api/gen/delicious/v1;deliciousv1";
+
+import "google/protobuf/timestamp.proto";
+import "delicious/v1/common.proto";
+
+// ---------------------------------------------------------------------------
+// 菜谱服务：我的厨房 CRUD + 版本控制 + Diff
+// ---------------------------------------------------------------------------
+
+service RecipeService {
+  // 创建菜谱（同时写入 v1 版本）
+  rpc CreateRecipe(CreateRecipeRequest) returns (CreateRecipeResponse);
+
+  // 获取菜谱详情（含当前版本内容）
+  rpc GetRecipe(GetRecipeRequest) returns (GetRecipeResponse);
+
+  // 列表（支持评分、时间筛选）
+  rpc ListRecipes(ListRecipesRequest) returns (ListRecipesResponse);
+
+  // 编辑菜谱：插入新版本并更新 current_version_id（不修改旧版本）
+  rpc UpdateRecipe(UpdateRecipeRequest) returns (UpdateRecipeResponse);
+
+  // 软删除
+  rpc DeleteRecipe(DeleteRecipeRequest) returns (DeleteRecipeResponse);
+
+  // 历史版本列表
+  rpc ListVersions(ListVersionsRequest) returns (ListVersionsResponse);
+
+  // 获取指定版本详情
+  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
+
+  // 两版本 Diff（当前 vs 历史）
+  rpc CompareVersions(CompareVersionsRequest) returns (CompareVersionsResponse);
+
+  // 我的菜谱 vs 百科基准 Diff
+  rpc CompareWithEncyclopedia(CompareWithEncyclopediaRequest) returns (CompareWithEncyclopediaResponse);
+}
+
+// ---- 实体 ----
+
+message RecipeVersion {
+  uint64 id = 1;
+  uint64 recipe_id = 2;
+  uint32 version_number = 3;
+  repeated Ingredient ingredients = 4;
+  repeated ProcessStep process_steps = 5;
+  string process_text = 6;
+  repeated string images = 7;
+  string commit_msg = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message MyRecipe {
+  uint64 id = 1;
+  uint64 user_id = 2;
+  string name = 3;
+  uint64 current_version_id = 4;
+  uint32 user_rating = 5;  // 1-5，0 表示未评分
+  string cover_image_url = 6;
+  uint64 encyclopedia_recipe_id = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  RecipeVersion current_version = 10;  // 详情时填充
+}
+
+message RecipeListItem {
+  uint64 id = 1;
+  string name = 2;
+  string cover_image_url = 3;
+  uint32 user_rating = 4;
+  uint32 current_version_number = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// ---- Create ----
+
+message CreateRecipeRequest {
+  uint64 user_id = 1;
+  string name = 2;
+  repeated Ingredient ingredients = 3;
+  repeated ProcessStep process_steps = 4;
+  string process_text = 5;
+  repeated string images = 6;
+  uint32 user_rating = 7;
+  string commit_msg = 8;
+  uint64 encyclopedia_recipe_id = 9;  // 可选，关联百科
+}
+
+message CreateRecipeResponse {
+  MyRecipe recipe = 1;
+}
+
+// ---- Get ----
+
+message GetRecipeRequest {
+  uint64 id = 1;
+  uint64 user_id = 2;  // 鉴权：仅本人
+}
+
+message GetRecipeResponse {
+  MyRecipe recipe = 1;
+}
+
+// ---- List ----
+
+message ListRecipesRequest {
+  uint64 user_id = 1;
+  Pagination pagination = 2;
+  optional uint32 min_rating = 3;
+  optional uint32 max_rating = 4;
+  optional google.protobuf.Timestamp created_after = 5;
+  optional google.protobuf.Timestamp created_before = 6;
+  string keyword = 7;  // 按菜名模糊搜索
+  string order_by = 8; // created_at | updated_at | user_rating
+  bool desc = 9;
+}
+
+message ListRecipesResponse {
+  repeated RecipeListItem items = 1;
+  PageInfo page_info = 2;
+}
+
+// ---- Update（版本化写入）----
+
+message UpdateRecipeRequest {
+  uint64 id = 1;
+  uint64 user_id = 2;
+  string name = 3;                      // 可改菜名
+  repeated Ingredient ingredients = 4;
+  repeated ProcessStep process_steps = 5;
+  string process_text = 6;
+  repeated string images = 7;
+  uint32 user_rating = 8;
+  string commit_msg = 9;                // 必填，记录修改原因
+  uint64 encyclopedia_recipe_id = 10;
+}
+
+message UpdateRecipeResponse {
+  MyRecipe recipe = 1;
+  RecipeVersion new_version = 2;
+}
+
+// ---- Delete ----
+
+message DeleteRecipeRequest {
+  uint64 id = 1;
+  uint64 user_id = 2;
+}
+
+message DeleteRecipeResponse {}
+
+// ---- Versions ----
+
+message ListVersionsRequest {
+  uint64 recipe_id = 1;
+  uint64 user_id = 2;
+}
+
+message VersionListItem {
+  uint64 id = 1;
+  uint32 version_number = 2;
+  string commit_msg = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message ListVersionsResponse {
+  repeated VersionListItem versions = 1;
+}
+
+message GetVersionRequest {
+  uint64 recipe_id = 1;
+  uint64 version_id = 2;
+  uint64 user_id = 3;
+}
+
+message GetVersionResponse {
+  RecipeVersion version = 1;
+}
+
+// ---- Diff ----
+
+message CompareVersionsRequest {
+  uint64 recipe_id = 1;
+  uint64 user_id = 2;
+  uint64 base_version_id = 3;   // 基准（通常为历史版本）
+  uint64 target_version_id = 4; // 对比（通常为 current_version_id）
+}
+
+message CompareVersionsResponse {
+  RecipeVersion base_version = 1;
+  RecipeVersion target_version = 2;
+  VersionDiffResult diff = 3;
+}
+
+message CompareWithEncyclopediaRequest {
+  uint64 recipe_id = 1;
+  uint64 user_id = 2;
+  uint64 encyclopedia_recipe_id = 3;  // 0 则按菜名自动匹配
+}
+
+message CompareWithEncyclopediaResponse {
+  uint64 encyclopedia_recipe_id = 1;
+  string encyclopedia_name = 2;
+  repeated Ingredient encyclopedia_ingredients = 3;
+  repeated ProcessStep encyclopedia_process_steps = 4;
+  RecipeVersion my_version = 5;
+  VersionDiffResult diff = 6;
+}
