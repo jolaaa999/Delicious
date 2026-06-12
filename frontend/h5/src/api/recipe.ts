@@ -1,5 +1,10 @@
 import client from './client'
-import type { Ingredient, MyRecipe, ProcessStep, RecipeListItem, PageInfo } from '@/types/recipe'
+import type { Ingredient, MyRecipe, ProcessStep, RecipeListItem, PageInfo, RecipeVersion } from '@/types/recipe'
+import type {
+  CompareEncyclopediaResponse,
+  CompareVersionsResponse,
+  VersionListItem,
+} from '@/types/diff'
 
 export interface ListParams {
   page?: number
@@ -48,7 +53,11 @@ export function deleteRecipe(id: number) {
 }
 
 export function listVersions(recipeId: number) {
-  return client.get(`/recipes/${recipeId}/versions`)
+  return client.get<unknown, { versions: VersionListItem[] }>(`/recipes/${recipeId}/versions`)
+}
+
+export function getVersion(recipeId: number, versionId: number) {
+  return client.get<unknown, { version: RecipeVersion }>(`/recipes/${recipeId}/versions/${versionId}`)
 }
 
 export function compareVersions(
@@ -56,13 +65,13 @@ export function compareVersions(
   baseVersionId: number,
   targetVersionId: number,
 ) {
-  return client.get(`/recipes/${recipeId}/diff`, {
+  return client.get<unknown, CompareVersionsResponse>(`/recipes/${recipeId}/diff`, {
     params: { base_version_id: baseVersionId, target_version_id: targetVersionId },
   })
 }
 
 export function compareWithEncyclopedia(recipeId: number, encyclopediaRecipeId?: number) {
-  return client.get(`/recipes/${recipeId}/diff/encyclopedia`, {
+  return client.get<unknown, CompareEncyclopediaResponse>(`/recipes/${recipeId}/diff/encyclopedia`, {
     params: encyclopediaRecipeId ? { encyclopedia_recipe_id: encyclopediaRecipeId } : {},
   })
 }

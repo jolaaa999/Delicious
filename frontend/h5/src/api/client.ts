@@ -1,7 +1,14 @@
 import axios from 'axios'
 
+/**
+ * 本地开发：/api/v1 → Vite proxy → localhost:8080
+ * Vercel 部署：/api/v1 → api/v1/[...path].ts → BACKEND_URL
+ * 直连后端：设置 VITE_API_BASE_URL=https://your-api.com/api/v1
+ */
+const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+
 const client = axios.create({
-  baseURL: '/api/v1',
+  baseURL,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })
