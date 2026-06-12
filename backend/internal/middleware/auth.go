@@ -2,8 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/delicious/delicious/internal/config"
 	"github.com/gin-gonic/gin"
@@ -11,19 +9,10 @@ import (
 
 const UserIDKey = "user_id"
 
-// Auth 个人使用：优先 JWT（Bearer），否则使用默认 user_id
-func Auth(cfg config.Config) gin.HandlerFunc {
+// InjectOwner 个人使用：固定 owner，无需登录
+func InjectOwner(cfg config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		uid := cfg.DefaultUID
-		auth := c.GetHeader("Authorization")
-		if strings.HasPrefix(auth, "Bearer ") {
-			// TODO: 完整 JWT 校验；当前解析简单 payload 或 fallback default
-			token := strings.TrimPrefix(auth, "Bearer ")
-			if parsed, err := strconv.ParseUint(token, 10, 64); err == nil && parsed > 0 {
-				uid = parsed
-			}
-		}
-		c.Set(UserIDKey, uid)
+		c.Set(UserIDKey, cfg.DefaultUID)
 		c.Next()
 	}
 }
@@ -48,10 +37,6 @@ func NotFound(c *gin.Context, msg string) {
 
 func BadRequest(c *gin.Context, msg string) {
 	JSONError(c, http.StatusBadRequest, msg)
-}
-
-func Forbidden(c *gin.Context) {
-	JSONError(c, http.StatusForbidden, "无权访问")
 }
 
 func InternalError(c *gin.Context, err error) {

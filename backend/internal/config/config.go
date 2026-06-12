@@ -7,8 +7,7 @@ import (
 
 type Config struct {
 	Port          string
-	MySQLDSN      string
-	JWTSecret     string
+	DatabaseURL   string
 	DefaultUID    uint64
 	AutoMigrate   bool
 	UploadDir     string
@@ -19,10 +18,19 @@ type Config struct {
 func Load() Config {
 	uid, _ := strconv.ParseUint(getEnv("DEFAULT_USER_ID", "1"), 10, 64)
 	maxMB, _ := strconv.ParseInt(getEnv("MAX_UPLOAD_MB", "10"), 10, 64)
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = os.Getenv("POSTGRES_URL")
+	}
+	if dbURL == "" {
+		// 本地 Docker Postgres 默认
+		dbURL = "postgres://delicious:delicious@127.0.0.1:5432/delicious?sslmode=disable"
+	}
+
 	return Config{
 		Port:          getEnv("PORT", "8080"),
-		MySQLDSN:      getEnv("MYSQL_DSN", "delicious:delicious@tcp(127.0.0.1:3306)/delicious?charset=utf8mb4&parseTime=True&loc=Local"),
-		JWTSecret:     getEnv("JWT_SECRET", "delicious-dev-secret"),
+		DatabaseURL:   dbURL,
 		DefaultUID:    uid,
 		AutoMigrate:   getEnv("AUTO_MIGRATE", "true") == "true",
 		UploadDir:     getEnv("UPLOAD_DIR", "./uploads"),
