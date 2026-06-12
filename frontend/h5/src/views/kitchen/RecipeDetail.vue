@@ -7,6 +7,7 @@ import type { MyRecipe } from '@/types/recipe'
 import type { VersionListItem } from '@/types/diff'
 import VersionHistoryDrawer from '@/components/diff/VersionHistoryDrawer.vue'
 import DiffPanel from '@/components/diff/DiffPanel.vue'
+import { resolveImageUrl } from '@/api/upload'
 
 const route = useRoute()
 const router = useRouter()
@@ -93,7 +94,7 @@ async function onCompareEncyclopedia() {
         <div class="hero__cover">
           <img
             v-if="currentVersion.images?.[0] || recipe.cover_image_url"
-            :src="currentVersion.images?.[0] || recipe.cover_image_url"
+            :src="resolveImageUrl(currentVersion.images?.[0] || recipe.cover_image_url || '')"
             :alt="recipe.name"
           />
           <div v-else class="hero__placeholder">{{ recipe.name.charAt(0) }}</div>

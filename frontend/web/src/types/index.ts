@@ -47,26 +47,41 @@ export interface RecipeListItem {
   updated_at: string
 }
 
-export interface EncyclopediaListItem {
-  id: number
-  name: string
-  cover_image_url?: string
-  category?: string
-  tags?: string[]
-  description?: string
-}
-
-export interface EncyclopediaRecipe extends EncyclopediaListItem {
-  ingredients: Ingredient[]
-  process_steps: ProcessStep[]
-  source?: string
-  view_count?: number
-  created_at?: string
-}
-
 export interface PageInfo {
   page: number
   page_size: number
   total: number
   total_pages: number
+}
+
+export interface TimelineNode {
+  version_id: number
+  version_number: number
+  commit_msg: string
+  created_at: string
+  is_current: boolean
+}
+
+export interface DashboardStats {
+  total_recipes: number
+  average_rating: number
+  total_versions: number
+  rating_distribution: { rating: number; count: number }[]
+  latest_recipe_at?: string
+}
+
+export interface VersionDiffResult {
+  ingredient_diffs: Array<{
+    type: string
+    base?: Ingredient
+    target?: Ingredient
+    amount_delta?: number
+  }>
+  process_diffs: Array<{
+    type: string
+    order: number
+    base?: ProcessStep
+    target?: ProcessStep
+  }>
+  summary: string
 }

@@ -1,5 +1,5 @@
 import client from './client'
-import type { EncyclopediaListItem, PageInfo } from '@/types/recipe'
+import type { EncyclopediaListItem, EncyclopediaRecipe, PageInfo } from '@/types/recipe'
 
 export interface SearchParams {
   keyword?: string
@@ -18,5 +18,5 @@ export function searchEncyclopedia(params: SearchParams) {
 }
 
 export function getEncyclopedia(id: number) {
-  return client.get(`/encyclopedia/${id}`)
+  return client.get<unknown, { recipe: EncyclopediaRecipe }>(`/encyclopedia/${id}`)
 }

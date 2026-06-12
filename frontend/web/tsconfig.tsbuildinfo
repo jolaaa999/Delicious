@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/api/client.ts","./src/api/index.ts","./src/router/index.ts","./src/types/index.ts","./src/app.vue","./src/layouts/adminlayout.vue","./src/views/dashboardview.vue","./src/views/recipedetailview.vue","./src/views/recipelistview.vue","./env.d.ts"],"version":"5.7.3"}

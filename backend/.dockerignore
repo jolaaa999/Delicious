@@ -1,0 +1,6 @@
+go.sum
+bin/
+uploads/
+.env
+.env.*
+*.exe
