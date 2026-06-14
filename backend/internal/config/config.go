@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -20,6 +22,8 @@ type Config struct {
 }
 
 func Load() Config {
+	_ = godotenv.Load()
+
 	uid, _ := strconv.ParseUint(getEnv("DEFAULT_USER_ID", "1"), 10, 64)
 	maxMB, _ := strconv.ParseInt(getEnv("MAX_UPLOAD_MB", "10"), 10, 64)
 	onVercel := os.Getenv("VERCEL") != ""

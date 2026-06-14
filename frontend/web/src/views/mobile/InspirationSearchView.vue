@@ -10,16 +10,19 @@ const keyword = ref('')
 const items = ref<EncyclopediaListItem[]>([])
 const loading = ref(false)
 const searched = ref(false)
+const searchError = ref('')
 
 async function handleSearch() {
   if (!keyword.value.trim()) return
   loading.value = true
   searched.value = true
+  searchError.value = ''
   try {
     const res = await searchEncyclopedia({ keyword: keyword.value.trim(), page: 1, page_size: 20 })
-    items.value = res.items
-  } catch {
+    items.value = res.items ?? []
+  } catch (e: unknown) {
     items.value = []
+    searchError.value = (e as { message?: string })?.message || '搜索失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -58,6 +61,7 @@ function goDetail(id: number) {
     </div>
 
     <div v-if="loading" class="state-card">正在寻找灵感…</div>
+    <div v-else-if="searchError" class="state-card form-error">{{ searchError }}</div>
     <div v-else-if="searched && items.length === 0" class="state-card">未找到相关菜谱，换个关键词试试</div>
 
     <ul v-else class="recipe-flow">

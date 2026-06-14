@@ -33,18 +33,15 @@ func (p *spoonacularProvider) Search(ctx context.Context, keyword string, page, 
 	q.Set("query", keyword)
 	q.Set("number", strconv.Itoa(pageSize))
 	q.Set("offset", strconv.Itoa(offset))
-	q.Set("addRecipeInformation", "false")
+	q.Set("addRecipeInformation", "true")
 	q.Set("apiKey", p.apiKey)
-	if containsChinese(keyword) {
-		q.Set("cuisine", "Chinese")
-	}
 	body, err := p.get(ctx, "https://api.spoonacular.com/recipes/complexSearch?"+q.Encode())
 	if err != nil {
 		return nil, 0, err
 	}
 	var resp struct {
-		Results      []spoonacularSearchItem `json:"results"`
-		TotalResults int                     `json:"totalResults"`
+		Results      []spoonacularRecipeDetail `json:"results"`
+		TotalResults int                       `json:"totalResults"`
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, 0, err
@@ -54,14 +51,8 @@ func (p *spoonacularProvider) Search(ctx context.Context, keyword string, page, 
 	}
 
 	hits := make([]OnlineRecipeHit, 0, len(resp.Results))
-	for _, item := range resp.Results {
-		detail, detailErr := p.Fetch(ctx, strconv.Itoa(item.ID))
-		if detailErr != nil {
-			hit := item.toBasicHit()
-			hits = append(hits, hit)
-			continue
-		}
-		hits = append(hits, *detail)
+	for _, detail := range resp.Results {
+		hits = append(hits, detail.toHit())
 	}
 	return hits, resp.TotalResults, nil
 }

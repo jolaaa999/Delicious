@@ -18,19 +18,22 @@ type onlineRecipeProvider interface {
 
 // OnlineRecipeSearch 聚合多个公开菜谱 API 进行联网搜索。
 type OnlineRecipeSearch struct {
-	providers []onlineRecipeProvider
-	enabled   bool
+	providers  []onlineRecipeProvider
+	enabled    bool
+	httpClient *http.Client
 }
 
 func NewOnlineRecipeSearch(cfg config.Config) *OnlineRecipeSearch {
+	client := &http.Client{Timeout: 15 * time.Second}
 	var providers []onlineRecipeProvider
 	if cfg.SpoonacularAPIKey != "" {
-		providers = append(providers, newSpoonacularProvider(cfg.SpoonacularAPIKey, &http.Client{Timeout: 12 * time.Second}))
+		providers = append(providers, newSpoonacularProvider(cfg.SpoonacularAPIKey, client))
 	}
-	providers = append(providers, newMealDBProvider(&http.Client{Timeout: 12 * time.Second}))
+	providers = append(providers, newMealDBProvider(client))
 	return &OnlineRecipeSearch{
-		providers: providers,
-		enabled:   cfg.OnlineSearchEnabled,
+		providers:  providers,
+		enabled:    cfg.OnlineSearchEnabled,
+		httpClient: client,
 	}
 }
 
@@ -42,21 +45,53 @@ func (s *OnlineRecipeSearch) Search(ctx context.Context, keyword string, page, p
 	if !s.Enabled() || keyword == "" {
 		return nil, 0, fmt.Errorf("online search disabled")
 	}
+
+	keywords := expandSearchKeywords(ctx, s.httpClient, keyword)
+	seen := map[string]bool{}
+	allHits := make([]OnlineRecipeHit, 0, pageSize)
+	totalMax := 0
 	var lastErr error
-	for _, p := range s.providers {
-		hits, total, err := p.Search(ctx, keyword, page, pageSize)
-		if err != nil {
-			lastErr = err
-			continue
+
+	for _, kw := range keywords {
+		for _, p := range s.providers {
+			hits, total, err := p.Search(ctx, kw, page, pageSize)
+			if err != nil {
+				lastErr = err
+				continue
+			}
+			if total > totalMax {
+				totalMax = total
+			}
+			for _, hit := range hits {
+				key := hit.Source + ":" + hit.ExternalID
+				if seen[key] {
+					continue
+				}
+				seen[key] = true
+				allHits = append(allHits, hit)
+			}
+			if len(allHits) >= pageSize {
+				break
+			}
 		}
-		if len(hits) > 0 {
-			return hits, total, nil
+		if len(allHits) >= pageSize {
+			break
 		}
 	}
-	if lastErr != nil {
-		return nil, 0, lastErr
+
+	if len(allHits) > pageSize {
+		allHits = allHits[:pageSize]
 	}
-	return nil, 0, nil
+	if len(allHits) == 0 {
+		if lastErr != nil {
+			return nil, 0, lastErr
+		}
+		return nil, 0, nil
+	}
+	if totalMax == 0 {
+		totalMax = len(allHits)
+	}
+	return allHits, totalMax, nil
 }
 
 func (s *OnlineRecipeSearch) Fetch(ctx context.Context, source, externalID string) (*OnlineRecipeHit, error) {
