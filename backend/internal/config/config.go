@@ -13,6 +13,8 @@ type Config struct {
 	UploadDir     string
 	PublicBaseURL string
 	MaxUploadMB   int64
+	BlobToken     string
+	UseBlob       bool
 }
 
 func Load() Config {
@@ -24,8 +26,20 @@ func Load() Config {
 		dbURL = os.Getenv("POSTGRES_URL")
 	}
 	if dbURL == "" {
-		// 本地 Docker Postgres 默认
 		dbURL = "postgres://delicious:delicious@127.0.0.1:5432/delicious?sslmode=disable"
+	}
+
+	blobToken := os.Getenv("BLOB_READ_WRITE_TOKEN")
+	publicBase := getEnv("PUBLIC_BASE_URL", "")
+	if publicBase == "" {
+		if host := os.Getenv("VERCEL_URL"); host != "" {
+			publicBase = "https://" + host
+		}
+	}
+
+	uploadDir := getEnv("UPLOAD_DIR", "./uploads")
+	if blobToken != "" {
+		uploadDir = ""
 	}
 
 	return Config{
@@ -33,9 +47,11 @@ func Load() Config {
 		DatabaseURL:   dbURL,
 		DefaultUID:    uid,
 		AutoMigrate:   getEnv("AUTO_MIGRATE", "true") == "true",
-		UploadDir:     getEnv("UPLOAD_DIR", "./uploads"),
-		PublicBaseURL: getEnv("PUBLIC_BASE_URL", ""),
+		UploadDir:     uploadDir,
+		PublicBaseURL: publicBase,
 		MaxUploadMB:   maxMB,
+		BlobToken:     blobToken,
+		UseBlob:       blobToken != "",
 	}
 }
 

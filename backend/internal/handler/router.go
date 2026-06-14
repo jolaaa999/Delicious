@@ -19,11 +19,13 @@ func Register(r *gin.Engine, cfg config.Config, h Handlers) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	// 静态文件：上传的图片
-	r.Static("/uploads", cfg.UploadDir)
+	// 本地开发时提供静态文件；Vercel 使用 Blob 存储，不走本地目录
+	if cfg.UploadDir != "" {
+		r.Static("/uploads", cfg.UploadDir)
+	}
 
 	v1 := r.Group("/api/v1")
-	v1.Use(middleware.Auth(cfg))
+	v1.Use(middleware.InjectOwner(cfg))
 
 	// Upload
 	v1.POST("/upload", h.Upload.Upload)

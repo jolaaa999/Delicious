@@ -5,6 +5,8 @@
   "buildCommand": "cd frontend/web && npm run build",
   "outputDirectory": "frontend/web/dist",
   "rewrites": [
+    { "source": "/api/v1/(.*)", "destination": "/api" },
+    { "source": "/health", "destination": "/api" },
     { "source": "/((?!api).*)", "destination": "/index.html" }
   ]
 }
