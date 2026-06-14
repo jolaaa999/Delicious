@@ -63,10 +63,12 @@ function addToKitchen() {
 
     <template v-else>
       <section class="hero">
-        <h1 class="hero__name">{{ recipe.name }}</h1>
-        <p v-if="recipe.description" class="hero__desc">{{ recipe.description }}</p>
-        <div v-if="recipe.category" class="hero__tag">{{ recipe.category }}</div>
-        <p v-if="sourceLabel" class="hero__source">{{ sourceLabel }}</p>
+        <div class="hero__info">
+          <h1 class="hero__name">{{ recipe.name }}</h1>
+          <p v-if="recipe.description" class="hero__desc">{{ recipe.description }}</p>
+          <div v-if="recipe.category" class="hero__tag">{{ recipe.category }}</div>
+          <p v-if="sourceLabel" class="hero__source">{{ sourceLabel }}</p>
+        </div>
       </section>
 
       <button class="add-btn" type="button" @click="addToKitchen">
@@ -86,7 +88,7 @@ function addToKitchen() {
         <ol class="step-list">
           <li v-for="step in recipe.process_steps" :key="step.order" class="step-item">
             <span class="step-num">{{ step.order }}</span>
-            <span>{{ step.content }}</span>
+            <span class="step-item__text">{{ step.content }}</span>
           </li>
         </ol>
       </section>
