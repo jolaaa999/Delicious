@@ -1,16 +1,19 @@
 :root {
-  --delicious-primary: #d4622a;
-  --delicious-bg: #f5f6f8;
+  --delicious-primary: #c45c26;
+  --delicious-bg: #faf6f1;
 }
 
 html, body, #app {
   height: 100%;
   margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: 'Outfit', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: var(--delicious-bg);
+  color: #2c2420;
 }
 
 .el-menu {

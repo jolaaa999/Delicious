@@ -43,6 +43,7 @@ function navigate(tab: TabItem) {
       :aria-selected="activeTab === tab.key"
       @click="navigate(tab)"
     >
+      <span class="tabbar__pill" :class="{ 'tabbar__pill--visible': activeTab === tab.key }" />
       <span class="tabbar__icon-wrap">
         <svg
           v-if="tab.icon === 'spark'"
@@ -90,7 +91,6 @@ function navigate(tab: TabItem) {
             stroke-linecap="round"
           />
         </svg>
-        <span v-if="activeTab === tab.key" class="tabbar__dot" />
       </span>
       <span class="tabbar__label">{{ tab.label }}</span>
     </button>
@@ -100,65 +100,80 @@ function navigate(tab: TabItem) {
 <style scoped>
 .tabbar {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 12px;
+  right: 12px;
+  bottom: calc(10px + var(--safe-bottom));
   z-index: 100;
   display: flex;
   align-items: stretch;
-  height: calc(var(--tabbar-height) + var(--safe-bottom));
-  padding-bottom: var(--safe-bottom);
-  background: rgba(255, 248, 240, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid var(--color-border);
-  box-shadow: 0 -4px 24px var(--color-shadow);
+  height: var(--tabbar-height);
+  padding: 4px;
+  border-radius: var(--radius-xl);
+  background: rgba(255, 253, 249, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 32px var(--color-shadow-lg), 0 2px 8px var(--color-shadow);
 }
 
 .tabbar__item {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 0 6px;
+  gap: 3px;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
   color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
 }
 
 .tabbar__item--active {
   color: var(--color-primary);
 }
 
+.tabbar__pill {
+  position: absolute;
+  inset: 2px 4px;
+  border-radius: calc(var(--radius-xl) - 4px);
+  background: var(--color-primary-soft);
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
+  pointer-events: none;
+}
+
+.tabbar__pill--visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
 .tabbar__icon-wrap {
   position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
 }
 
 .tabbar__icon {
-  width: 24px;
-  height: 24px;
-}
-
-.tabbar__dot {
-  position: absolute;
-  bottom: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--color-primary);
+  width: 22px;
+  height: 22px;
 }
 
 .tabbar__label {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-body);
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
 .tabbar__item--active .tabbar__label {

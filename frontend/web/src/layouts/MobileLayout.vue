@@ -28,7 +28,7 @@ const showTabBar = computed(() => !route.meta.hideTabBar)
 }
 
 .mobile-layout--with-tabbar .mobile-layout__main {
-  padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom));
+  padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 28px);
 }
 
 .mobile-layout__main {

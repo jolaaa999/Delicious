@@ -32,6 +32,7 @@ function goDetail(id: number) {
 <template>
   <div class="page inspiration-page">
     <header class="page-header">
+      <p class="page-eyebrow">Delicious</p>
       <h1 class="page-title">找灵感</h1>
       <p class="page-subtitle">搜索百科菜谱，发现新味道</p>
     </header>

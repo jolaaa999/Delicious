@@ -1,0 +1,49 @@
+/* 人间烟火 · 移动端设计令牌 — 灵感来自「黄金时刻」暖调 */
+:root {
+  --color-primary: #c45c26;
+  --color-primary-dark: #9e4520;
+  --color-primary-soft: #f8ebe3;
+  --color-accent: #d4a054;
+  --color-accent-soft: #fdf4e3;
+
+  --color-bg-page: #faf6f1;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #fffdf9;
+  --color-surface-muted: #f3ede6;
+
+  --color-text: #2c2420;
+  --color-text-secondary: #5c524a;
+  --color-text-muted: #9a8f85;
+  --color-text-inverse: #fffdf9;
+
+  --color-border: rgba(44, 36, 32, 0.08);
+  --color-border-strong: rgba(44, 36, 32, 0.14);
+  --color-shadow: rgba(44, 36, 32, 0.07);
+  --color-shadow-lg: rgba(44, 36, 32, 0.12);
+
+  --color-star: #e8a838;
+  --color-success: #5a8f5e;
+  --color-danger: #c1666b;
+  --color-diff-added: #5a8f5e;
+  --color-diff-removed: #c1666b;
+  --color-diff-changed: #d4a054;
+
+  --font-display: 'Noto Serif SC', 'Songti SC', serif;
+  --font-body: 'Outfit', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-full: 999px;
+
+  --space-page-x: 20px;
+  --space-section: 28px;
+  --tabbar-height: 58px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-height: 52px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 180ms;
+  --duration-normal: 320ms;
+}

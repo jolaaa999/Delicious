@@ -27,6 +27,7 @@ function renderStars(rating: number) {
 <template>
   <div class="page kitchen-page">
     <header class="page-header">
+      <p class="page-eyebrow">Delicious</p>
       <h1 class="page-title">我的厨房</h1>
       <p class="page-subtitle">记录每一道用心做的菜</p>
     </header>
