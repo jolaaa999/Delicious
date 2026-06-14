@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"log"
 	"sync"
 
@@ -13,33 +14,37 @@ import (
 )
 
 var (
-	once   sync.Once
-	engine *gin.Engine
+	once    sync.Once
+	engine  *gin.Engine
+	initErr error
 )
 
-// Bootstrap 初始化数据库、服务与路由，供本地 main 与 Vercel Serverless 共用。
-func Bootstrap() *gin.Engine {
+func initApp() {
 	once.Do(func() {
 		gin.SetMode(gin.ReleaseMode)
 		cfg := config.Load()
 
 		db, err := database.Connect(cfg.DatabaseURL)
 		if err != nil {
-			log.Fatalf("database: %v", err)
+			initErr = fmt.Errorf("database: %w", err)
+			return
 		}
 
 		if cfg.AutoMigrate {
 			if err := database.AutoMigrate(db); err != nil {
-				log.Fatalf("migrate: %v", err)
+				initErr = fmt.Errorf("migrate: %w", err)
+				return
 			}
 			if err := database.Seed(db, cfg.DefaultUID); err != nil {
-				log.Fatalf("seed: %v", err)
+				initErr = fmt.Errorf("seed: %w", err)
+				return
 			}
 		}
 
 		uploadSvc := service.NewUploadService(cfg)
 		if err := uploadSvc.EnsureDir(); err != nil {
-			log.Fatalf("upload dir: %v", err)
+			initErr = fmt.Errorf("upload dir: %w", err)
+			return
 		}
 
 		recipeRepo := repository.NewRecipeRepository(db)
@@ -58,5 +63,19 @@ func Bootstrap() *gin.Engine {
 		})
 		engine = r
 	})
+}
+
+// Bootstrap 初始化数据库、服务与路由，供本地 main 使用。
+func Bootstrap() *gin.Engine {
+	initApp()
+	if initErr != nil {
+		log.Fatal(initErr)
+	}
 	return engine
+}
+
+// Engine 供 Vercel Serverless 使用，初始化失败时返回可读错误而非崩溃。
+func Engine() (*gin.Engine, error) {
+	initApp()
+	return engine, initErr
 }

@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/delicious/delicious/pkg/model"
 	"gorm.io/driver/postgres"
@@ -11,6 +12,11 @@ import (
 )
 
 func Connect(databaseURL string) (*gorm.DB, error) {
+	if databaseURL == "" {
+		return nil, fmt.Errorf("DATABASE_URL 未配置：请在 Vercel 项目 Settings → Environment Variables 中添加 Postgres 连接串")
+	}
+	databaseURL = withConnectTimeout(databaseURL, 5)
+
 	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
@@ -118,3 +124,14 @@ func Seed(db *gorm.DB, defaultUID uint64) error {
 }
 
 func strPtr(s string) *string { return &s }
+
+func withConnectTimeout(databaseURL string, seconds int) string {
+	if strings.Contains(databaseURL, "connect_timeout=") {
+		return databaseURL
+	}
+	sep := "?"
+	if strings.Contains(databaseURL, "?") {
+		sep = "&"
+	}
+	return databaseURL + sep + fmt.Sprintf("connect_timeout=%d", seconds)
+}

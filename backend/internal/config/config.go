@@ -20,12 +20,15 @@ type Config struct {
 func Load() Config {
 	uid, _ := strconv.ParseUint(getEnv("DEFAULT_USER_ID", "1"), 10, 64)
 	maxMB, _ := strconv.ParseInt(getEnv("MAX_UPLOAD_MB", "10"), 10, 64)
+	onVercel := os.Getenv("VERCEL") != ""
 
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = os.Getenv("POSTGRES_URL")
-	}
-	if dbURL == "" {
+	dbURL := firstEnv(
+		"DATABASE_URL",
+		"POSTGRES_URL",
+		"POSTGRES_PRISMA_URL",
+		"POSTGRES_URL_NON_POOLING",
+	)
+	if dbURL == "" && !onVercel {
 		dbURL = "postgres://delicious:delicious@127.0.0.1:5432/delicious?sslmode=disable"
 	}
 
@@ -38,7 +41,7 @@ func Load() Config {
 	}
 
 	uploadDir := getEnv("UPLOAD_DIR", "./uploads")
-	if blobToken != "" {
+	if blobToken != "" || onVercel {
 		uploadDir = ""
 	}
 
@@ -60,4 +63,13 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if v := os.Getenv(key); v != "" {
+			return v
+		}
+	}
+	return ""
 }
