@@ -51,7 +51,7 @@ func initApp() {
 		encyRepo := repository.NewEncyclopediaRepository(db)
 
 		recipeSvc := service.NewRecipeService(recipeRepo, encyRepo)
-		encySvc := service.NewEncyclopediaService(encyRepo)
+		encySvc := service.NewEncyclopediaService(encyRepo, cfg)
 		dashSvc := service.NewDashboardService(recipeRepo)
 
 		r := gin.Default()

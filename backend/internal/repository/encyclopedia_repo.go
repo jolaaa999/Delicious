@@ -77,3 +77,42 @@ func (r *EncyclopediaRepository) FindByName(name string) (*model.EncyclopediaRec
 func (r *EncyclopediaRepository) ListByCategory(category string, page, pageSize int) ([]model.EncyclopediaRecipe, int64, error) {
 	return r.Search(SearchFilter{Category: category, Page: page, PageSize: pageSize})
 }
+
+type CachedOnlineHit struct {
+	ID     uint64
+	Recipe model.EncyclopediaRecipe
+}
+
+func (r *EncyclopediaRepository) UpsertExternal(recipe model.EncyclopediaRecipe) (*model.EncyclopediaRecipe, error) {
+	if recipe.ExternalSource == nil || recipe.ExternalID == nil {
+		return nil, fmt.Errorf("external source/id required")
+	}
+	var existing model.EncyclopediaRecipe
+	err := r.db.Where("external_source = ? AND external_id = ?", *recipe.ExternalSource, *recipe.ExternalID).First(&existing).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if err := r.db.Create(&recipe).Error; err != nil {
+			return nil, err
+		}
+		return &recipe, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	updates := map[string]interface{}{
+		"name":            recipe.Name,
+		"description":     recipe.Description,
+		"cover_image_url": recipe.CoverImageURL,
+		"category":        recipe.Category,
+		"tags":            recipe.Tags,
+		"ingredients":     recipe.Ingredients,
+		"process_steps":   recipe.ProcessSteps,
+		"source":          recipe.Source,
+	}
+	if err := r.db.Model(&existing).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+	if err := r.db.First(&existing, existing.ID).Error; err != nil {
+		return nil, err
+	}
+	return &existing, nil
+}

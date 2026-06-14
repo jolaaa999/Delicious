@@ -1,22 +1,34 @@
 package service
 
 import (
+	"context"
 	"math"
 
+	"github.com/delicious/delicious/internal/config"
 	"github.com/delicious/delicious/internal/dto"
 	"github.com/delicious/delicious/internal/repository"
 	"github.com/delicious/delicious/pkg/model"
 )
 
 type EncyclopediaService struct {
-	repo *repository.EncyclopediaRepository
+	repo   *repository.EncyclopediaRepository
+	online *OnlineRecipeSearch
 }
 
-func NewEncyclopediaService(repo *repository.EncyclopediaRepository) *EncyclopediaService {
-	return &EncyclopediaService{repo: repo}
+func NewEncyclopediaService(repo *repository.EncyclopediaRepository, cfg config.Config) *EncyclopediaService {
+	return &EncyclopediaService{
+		repo:   repo,
+		online: NewOnlineRecipeSearch(cfg),
+	}
 }
 
 func (s *EncyclopediaService) Search(keyword, category string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
+	if keyword != "" && category == "" && s.online.Enabled() {
+		if items, pageInfo, err := s.searchOnline(keyword, page, pageSize); err == nil && len(items) > 0 {
+			return items, pageInfo, nil
+		}
+	}
+
 	items, total, err := s.repo.Search(repository.SearchFilter{
 		Keyword:  keyword,
 		Category: category,
@@ -26,20 +38,23 @@ func (s *EncyclopediaService) Search(keyword, category string, page, pageSize in
 	if err != nil {
 		return nil, dto.PageInfo{}, err
 	}
-	result := make([]dto.EncyclopediaListItemDTO, 0, len(items))
-	for _, e := range items {
-		tags := []string(e.Tags)
-		result = append(result, dto.EncyclopediaListItemDTO{
-			ID:            e.ID,
-			Name:          e.Name,
-			CoverImageURL: e.CoverImageURL,
-			Category:      e.Category,
-			Tags:          tags,
-			Description:   e.Description,
-		})
+	return toListDTOs(items, page, pageSize, total), pageInfoFrom(page, pageSize, total), nil
+}
+
+func (s *EncyclopediaService) searchOnline(keyword string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
+	hits, total, err := s.online.Search(context.Background(), keyword, page, pageSize)
+	if err != nil || len(hits) == 0 {
+		return nil, dto.PageInfo{}, err
 	}
-	pages := int(math.Ceil(float64(total) / float64(pageSize)))
-	return result, dto.PageInfo{Page: page, PageSize: pageSize, Total: total, TotalPages: pages}, nil
+	cached, err := cacheOnlineHits(s.repo, hits)
+	if err != nil {
+		return nil, dto.PageInfo{}, err
+	}
+	items := make([]dto.EncyclopediaListItemDTO, 0, len(cached))
+	for _, hit := range cached {
+		items = append(items, toListItemDTO(&hit.Recipe))
+	}
+	return items, pageInfoFrom(page, pageSize, int64(total)), nil
 }
 
 func (s *EncyclopediaService) Get(id uint64) (*dto.EncyclopediaRecipeDTO, error) {
@@ -47,12 +62,51 @@ func (s *EncyclopediaService) Get(id uint64) (*dto.EncyclopediaRecipeDTO, error)
 	if err != nil {
 		return nil, err
 	}
+	if s.shouldRefreshOnline(e) {
+		if hit, fetchErr := s.online.Fetch(context.Background(), *e.ExternalSource, *e.ExternalID); fetchErr == nil {
+			if updated, upsertErr := s.repo.UpsertExternal(hit.toModel()); upsertErr == nil {
+				e = updated
+			}
+		}
+	}
 	out := toEncyclopediaDetailDTO(e)
 	return &out, nil
 }
 
+func (s *EncyclopediaService) shouldRefreshOnline(e *model.EncyclopediaRecipe) bool {
+	if e.ExternalSource == nil || e.ExternalID == nil || !s.online.Enabled() {
+		return false
+	}
+	return len(e.Ingredients) == 0 || len(e.ProcessSteps) == 0
+}
+
 func (s *EncyclopediaService) ListByCategory(category string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
 	return s.Search("", category, page, pageSize)
+}
+
+func toListDTOs(items []model.EncyclopediaRecipe, page, pageSize int, total int64) []dto.EncyclopediaListItemDTO {
+	result := make([]dto.EncyclopediaListItemDTO, 0, len(items))
+	for i := range items {
+		result = append(result, toListItemDTO(&items[i]))
+	}
+	return result
+}
+
+func toListItemDTO(e *model.EncyclopediaRecipe) dto.EncyclopediaListItemDTO {
+	tags := []string(e.Tags)
+	return dto.EncyclopediaListItemDTO{
+		ID:            e.ID,
+		Name:          e.Name,
+		CoverImageURL: e.CoverImageURL,
+		Category:      e.Category,
+		Tags:          tags,
+		Description:   e.Description,
+	}
+}
+
+func pageInfoFrom(page, pageSize int, total int64) dto.PageInfo {
+	pages := int(math.Ceil(float64(total) / float64(pageSize)))
+	return dto.PageInfo{Page: page, PageSize: pageSize, Total: total, TotalPages: pages}
 }
 
 func toEncyclopediaDetailDTO(e *model.EncyclopediaRecipe) dto.EncyclopediaRecipeDTO {

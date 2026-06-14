@@ -13,6 +13,8 @@ type EncyclopediaRecipe struct {
 	Ingredients   JSONSlice[Ingredient]    `gorm:"type:json;not null" json:"ingredients"`
 	ProcessSteps  JSONSlice[ProcessStep]   `gorm:"type:json;not null" json:"process_steps"`
 	Source        *string                  `gorm:"size:128" json:"source,omitempty"`
+	ExternalSource *string                 `gorm:"size:32;uniqueIndex:idx_encyclopedia_external" json:"external_source,omitempty"`
+	ExternalID     *string                 `gorm:"size:64;uniqueIndex:idx_encyclopedia_external" json:"external_id,omitempty"`
 	ViewCount     uint32                   `gorm:"not null;default:0" json:"view_count"`
 	CreatedAt     time.Time                `gorm:"precision:3" json:"created_at"`
 	UpdatedAt     time.Time                `gorm:"precision:3" json:"updated_at"`

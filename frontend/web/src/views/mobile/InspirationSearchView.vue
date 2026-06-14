@@ -35,7 +35,7 @@ function goDetail(id: number) {
     <header class="page-header">
       <p class="page-eyebrow">Delicious</p>
       <h1 class="page-title">找灵感</h1>
-      <p class="page-subtitle">搜索百科菜谱，发现新味道</p>
+      <p class="page-subtitle">联网搜索公开菜谱，发现新味道</p>
     </header>
 
     <div class="search-card">
@@ -54,11 +54,11 @@ function goDetail(id: number) {
         />
         <button class="search-bar__btn" type="button" @click="handleSearch">搜索</button>
       </div>
-      <p class="search-tip">支持按菜名快速检索百科菜谱</p>
+      <p class="search-tip">支持中文菜名，结果来自 Spoonacular / TheMealDB 公开菜谱库</p>
     </div>
 
     <div v-if="loading" class="state-card">正在寻找灵感…</div>
-    <div v-else-if="searched && items.length === 0" class="state-card">暂无相关菜谱</div>
+    <div v-else-if="searched && items.length === 0" class="state-card">未找到相关菜谱，换个关键词试试</div>
 
     <ul v-else class="recipe-flow">
       <li v-for="item in items" :key="item.id" class="recipe-card" @click="goDetail(item.id)">

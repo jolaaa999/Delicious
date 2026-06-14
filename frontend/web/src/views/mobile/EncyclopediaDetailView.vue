@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getEncyclopedia } from '@/api/encyclopedia'
 import type { Ingredient, ProcessStep } from '@/types/recipe'
@@ -10,6 +10,7 @@ interface EncyclopediaDetail {
   description?: string
   category?: string
   tags?: string[]
+  source?: string
   ingredients: Ingredient[]
   process_steps: ProcessStep[]
 }
@@ -20,6 +21,15 @@ const id = Number(route.params.id)
 
 const recipe = ref<EncyclopediaDetail | null>(null)
 const loading = ref(true)
+
+const sourceLabel = computed(() => {
+  const src = recipe.value?.source
+  if (!src) return ''
+  if (src === 'spoonacular') return '来源：Spoonacular 公开菜谱'
+  if (src === 'themealdb') return '来源：TheMealDB 公开菜谱'
+  if (src === '百科') return '来源：本地百科'
+  return `来源：${src}`
+})
 
 onMounted(async () => {
   try {
@@ -56,6 +66,7 @@ function addToKitchen() {
         <h1 class="hero__name">{{ recipe.name }}</h1>
         <p v-if="recipe.description" class="hero__desc">{{ recipe.description }}</p>
         <div v-if="recipe.category" class="hero__tag">{{ recipe.category }}</div>
+        <p v-if="sourceLabel" class="hero__source">{{ sourceLabel }}</p>
       </section>
 
       <button class="add-btn" type="button" @click="addToKitchen">

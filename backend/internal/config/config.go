@@ -13,8 +13,10 @@ type Config struct {
 	UploadDir     string
 	PublicBaseURL string
 	MaxUploadMB   int64
-	BlobToken     string
-	UseBlob       bool
+	BlobToken           string
+	UseBlob             bool
+	SpoonacularAPIKey   string
+	OnlineSearchEnabled bool
 }
 
 func Load() Config {
@@ -47,15 +49,17 @@ func Load() Config {
 	}
 
 	return Config{
-		Port:          getEnv("PORT", "8080"),
-		DatabaseURL:   dbURL,
-		DefaultUID:    uid,
-		AutoMigrate:   getEnv("AUTO_MIGRATE", "true") == "true",
-		UploadDir:     uploadDir,
-		PublicBaseURL: publicBase,
-		MaxUploadMB:   maxMB,
-		BlobToken:     blobToken,
-		UseBlob:       blobToken != "",
+		Port:                getEnv("PORT", "8080"),
+		DatabaseURL:         dbURL,
+		DefaultUID:          uid,
+		AutoMigrate:         getEnv("AUTO_MIGRATE", "true") == "true",
+		UploadDir:           uploadDir,
+		PublicBaseURL:       publicBase,
+		MaxUploadMB:         maxMB,
+		BlobToken:           blobToken,
+		UseBlob:             blobToken != "",
+		SpoonacularAPIKey:   os.Getenv("SPOONACULAR_API_KEY"),
+		OnlineSearchEnabled: getEnv("ENCYCLOPEDIA_ONLINE_SEARCH", "true") == "true",
 	}
 }
 
