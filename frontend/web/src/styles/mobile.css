@@ -646,6 +646,20 @@
   margin-bottom: 22px;
 }
 
+.form-section--hero {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+.form-section--hero .upload-trigger {
+  min-height: 148px;
+  padding: 36px 16px;
+}
+
+.form-section--hero .preview-grid {
+  margin-bottom: 4px;
+}
+
 .form-error {
   margin: 0 0 16px;
   padding: 12px 14px;

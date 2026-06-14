@@ -135,6 +135,9 @@ function goBack() { router.back() }
 
     <form v-else class="form" @submit.prevent="handleSubmit">
       <p v-if="errorMsg" class="form-error">{{ errorMsg }}</p>
+      <section class="form-section form-section--hero">
+        <ImageUploader v-model="imageUrls" />
+      </section>
       <section class="form-section"><label class="field-label">菜名</label><input v-model="name" class="field-input" type="text" placeholder="如：红烧肉" required /></section>
       <section class="form-section"><label class="field-label">个人评分</label><StarRating v-model="userRating" /></section>
       <section class="form-section">
@@ -155,7 +158,6 @@ function goBack() { router.back() }
         </div>
       </section>
       <section class="form-section"><label class="field-label">步骤备注（可选）</label><textarea v-model="processText" class="field-textarea" rows="3" placeholder="整体心得…" /></section>
-      <section class="form-section"><label class="field-label">菜品图片</label><ImageUploader v-model="imageUrls" /></section>
       <section v-if="isEdit" class="form-section"><label class="field-label">修改备注 <span class="required">*</span></label><input v-model="commitMsg" class="field-input" type="text" placeholder="如：减盐、调整炖煮时间" /></section>
       <section v-else class="form-section"><label class="field-label">备注（可选）</label><input v-model="commitMsg" class="field-input" type="text" placeholder="初次记录说明" /></section>
       <button type="submit" class="submit-btn" :disabled="saving">{{ saving ? '保存中…' : '保存菜品' }}</button>
