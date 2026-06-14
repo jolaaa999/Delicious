@@ -16,7 +16,8 @@ const typeLabels: Record<string, string> = {
   unchanged: '未变',
 }
 
-function filterItems(items: VersionDiffResult['ingredient_diff']) {
+function filterItems(items?: VersionDiffResult['ingredient_diff']) {
+  if (!items?.length) return []
   if (props.showUnchanged) return items
   return items.filter((i) => i.type !== 'unchanged')
 }

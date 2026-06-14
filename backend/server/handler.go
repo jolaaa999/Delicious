@@ -26,6 +26,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 func normalizeRequestPath(r *http.Request) {
 	for _, key := range []string{
 		"X-Vercel-Original-Url",
+		"X-Vercel-Original-Path",
 		"X-Original-Url",
 		"X-Forwarded-Uri",
 		"X-Invoke-Path",
@@ -42,6 +43,13 @@ func normalizeRequestPath(r *http.Request) {
 	if r.RequestURI != "" {
 		if u, parseErr := url.ParseRequestURI(r.RequestURI); parseErr == nil && u.Path != "" {
 			r.URL.Path = u.Path
+		}
+	}
+
+	// Vercel rewrite 可能把原始路径放在 query 中
+	if r.URL.Path == "/api" || r.URL.Path == "/api/" {
+		if p := r.URL.Query().Get("path"); p != "" {
+			r.URL.Path = p
 		}
 	}
 }

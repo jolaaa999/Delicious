@@ -3,7 +3,7 @@ import client from './client'
 export function uploadImage(file: File) {
   const formData = new FormData()
   formData.append('file', file)
-  return client.post<unknown, { url: string }>('/upload/image', formData, {
+  return client.post<unknown, { url: string }>('/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }

@@ -19,6 +19,63 @@ export function compareVersions(base: VersionSnapshot, target: VersionSnapshot):
   }
 }
 
+interface ApiIngredientDiff {
+  type: string
+  base?: Ingredient
+  target?: Ingredient
+}
+
+interface ApiProcessDiff {
+  type: string
+  order: number
+  base?: ProcessStep
+  target?: ProcessStep
+}
+
+interface ApiDiffResult {
+  ingredient_diff?: VersionDiffItem[]
+  process_diff?: VersionDiffItem[]
+  ingredient_diffs?: ApiIngredientDiff[]
+  process_diffs?: ApiProcessDiff[]
+}
+
+function mapDiffType(type: string): VersionDiffItem['type'] {
+  if (type === 'modified') return 'changed'
+  if (type === 'added' || type === 'removed' || type === 'changed' || type === 'unchanged') {
+    return type
+  }
+  return 'unchanged'
+}
+
+export function normalizeApiDiff(diff: unknown): VersionDiffResult {
+  if (!diff || typeof diff !== 'object') {
+    return { ingredient_diff: [], process_diff: [] }
+  }
+
+  const apiDiff = diff as ApiDiffResult
+  if (Array.isArray(apiDiff.ingredient_diff) && Array.isArray(apiDiff.process_diff)) {
+    return {
+      ingredient_diff: apiDiff.ingredient_diff,
+      process_diff: apiDiff.process_diff,
+    }
+  }
+
+  return {
+    ingredient_diff: (apiDiff.ingredient_diffs ?? []).map((item) => ({
+      type: mapDiffType(item.type),
+      name: item.target?.name ?? item.base?.name ?? '',
+      base: item.base ? formatIngredient(item.base) : undefined,
+      target: item.target ? formatIngredient(item.target) : undefined,
+    })),
+    process_diff: (apiDiff.process_diffs ?? []).map((item) => ({
+      type: mapDiffType(item.type),
+      name: stepLabel(item.target ?? item.base ?? { order: item.order, content: '' }),
+      base: item.base ? formatProcessStep(item.base) : undefined,
+      target: item.target ? formatProcessStep(item.target) : undefined,
+    })),
+  }
+}
+
 function diffIngredients(base: Ingredient[], target: Ingredient[]): VersionDiffItem[] {
   const baseMap = indexIngredients(base)
   const seen = new Set<string>()

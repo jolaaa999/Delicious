@@ -41,6 +41,6 @@ export function compareVersions(recipeId: number, baseId: number, targetId: numb
 
 export function compareWithEncyclopedia(recipeId: number) {
   return client.get<unknown, { diff: VersionDiffResult; encyclopedia_name: string }>(
-    `/recipes/${recipeId}/compare-encyclopedia`,
+    `/recipes/${recipeId}/diff/encyclopedia`,
   )
 }

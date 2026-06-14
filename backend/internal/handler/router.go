@@ -29,6 +29,7 @@ func Register(r *gin.Engine, cfg config.Config, h Handlers) {
 
 	// Upload
 	v1.POST("/upload", h.Upload.Upload)
+	v1.POST("/upload/image", h.Upload.Upload) // 兼容旧版前端路径
 	v1.POST("/upload/batch", h.Upload.UploadMultiple)
 
 	// Encyclopedia
@@ -46,6 +47,7 @@ func Register(r *gin.Engine, cfg config.Config, h Handlers) {
 	v1.GET("/recipes/:id/versions/:version_id", h.Recipe.GetVersion)
 	v1.GET("/recipes/:id/diff", h.Recipe.CompareVersions)
 	v1.GET("/recipes/:id/diff/encyclopedia", h.Recipe.CompareEncyclopedia)
+	v1.GET("/recipes/:id/compare-encyclopedia", h.Recipe.CompareEncyclopedia) // 兼容旧版前端路径
 
 	// Dashboard
 	v1.GET("/dashboard/stats", h.Dashboard.Stats)

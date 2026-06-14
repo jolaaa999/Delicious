@@ -7,7 +7,7 @@ import {
   getVersion,
   listVersions,
 } from '@/api/recipe'
-import { compareVersions as localCompare } from '@/utils/diff'
+import { compareVersions as localCompare, normalizeApiDiff } from '@/utils/diff'
 
 export type DiffMode = 'version' | 'encyclopedia' | null
 
@@ -52,12 +52,18 @@ export function useRecipeDiff(recipeId: number) {
 
     try {
       const res = await apiCompareVersions(recipeId, version.id, currentVersion.id)
-      diffResult.value = res.diff
+      diffResult.value = normalizeApiDiff(res.diff)
     } catch {
       const baseVer = await fetchVersionOrDemo(version.id, version.version_number)
       diffResult.value = localCompare(
-        { ingredients: baseVer.ingredients, process_steps: baseVer.process_steps },
-        { ingredients: currentVersion.ingredients, process_steps: currentVersion.process_steps },
+        {
+          ingredients: baseVer.ingredients ?? [],
+          process_steps: baseVer.process_steps ?? [],
+        },
+        {
+          ingredients: currentVersion.ingredients ?? [],
+          process_steps: currentVersion.process_steps ?? [],
+        },
       )
     } finally {
       diffLoading.value = false
@@ -73,12 +79,15 @@ export function useRecipeDiff(recipeId: number) {
     try {
       const res = await apiCompareEncyclopedia(recipeId)
       baseLabel.value = `百科 · ${res.encyclopedia_name || recipeName}`
-      diffResult.value = res.diff
+      diffResult.value = normalizeApiDiff(res.diff)
     } catch {
       const demoBase = getDemoEncyclopediaSnapshot()
       diffResult.value = localCompare(
         demoBase,
-        { ingredients: currentVersion.ingredients, process_steps: currentVersion.process_steps },
+        {
+          ingredients: currentVersion.ingredients ?? [],
+          process_steps: currentVersion.process_steps ?? [],
+        },
       )
     } finally {
       diffLoading.value = false
