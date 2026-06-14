@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { searchEncyclopedia } from '@/api/encyclopedia'
+import { resolveImageUrl } from '@/api/upload'
 import type { EncyclopediaListItem } from '@/types/recipe'
 
 const router = useRouter()
@@ -62,7 +63,7 @@ function goDetail(id: number) {
     <ul v-else class="recipe-flow">
       <li v-for="item in items" :key="item.id" class="recipe-card" @click="goDetail(item.id)">
         <div class="recipe-card__cover">
-          <img v-if="item.cover_image_url" :src="item.cover_image_url" :alt="item.name" />
+          <img v-if="item.cover_image_url" :src="resolveImageUrl(item.cover_image_url)" :alt="item.name" />
           <div v-else class="recipe-card__placeholder">{{ item.name.charAt(0) }}</div>
         </div>
         <div class="recipe-card__body">

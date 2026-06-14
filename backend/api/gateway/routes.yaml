@@ -14,6 +14,21 @@ gateway:
   middleware: jwt  # Bearer Token，解析 user_id 注入 context
 
 # -----------------------------------------------------------------------------
+# 文件上传
+# -----------------------------------------------------------------------------
+  - method: POST
+    path: /upload
+    note: 单图上传，multipart field: file
+
+  - method: POST
+    path: /upload/image
+    note: 兼容旧版前端路径，同 /upload
+
+  - method: POST
+    path: /upload/batch
+    note: 多图上传，multipart field: files
+
+# -----------------------------------------------------------------------------
 # 百科（EncyclopediaService）— H5「找灵感」
 # -----------------------------------------------------------------------------
 routes:
@@ -128,6 +143,14 @@ routes:
       id: recipe_id
     query_mapping:
       encyclopedia_recipe_id: encyclopedia_recipe_id
+
+  - method: GET
+    path: /recipes/{id}/compare-encyclopedia
+    grpc_service: delicious.v1.RecipeService
+    grpc_method: CompareWithEncyclopedia
+    path_mapping:
+      id: recipe_id
+    note: 兼容旧版前端路径，同 diff/encyclopedia
 
 # -----------------------------------------------------------------------------
 # 看板（DashboardService）— Web PC 管理端

@@ -34,7 +34,9 @@ async function handleCompare(node: TimelineNode) {
   diffLoading.value = true
   try {
     const res = await compareVersions(id, node.version_id, recipe.value.current_version_id)
-    diffResult.value = res.diff
+    diffResult.value = res.diff ?? null
+  } catch {
+    diffResult.value = null
   } finally {
     diffLoading.value = false
   }
@@ -104,7 +106,7 @@ function formatDate(iso: string) {
           </el-table>
 
           <h4>步骤</h4>
-          <el-steps direction="vertical" :active="recipe.current_version.process_steps.length">
+          <el-steps direction="vertical" :active="recipe.current_version.process_steps?.length ?? 0">
             <el-step
               v-for="step in recipe.current_version.process_steps"
               :key="step.order"
@@ -126,7 +128,7 @@ function formatDate(iso: string) {
             <el-alert :title="diffResult.summary" type="info" show-icon :closable="false" class="diff-summary" />
 
             <h4>配料差异</h4>
-            <el-table :data="diffResult.ingredient_diffs.filter(d => d.type !== 'unchanged')" size="small">
+            <el-table :data="(diffResult.ingredient_diffs ?? []).filter(d => d.type !== 'unchanged')" size="small">
               <el-table-column label="类型" width="80">
                 <template #default="{ row }">
                   <el-tag :type="diffTagType(row.type)" size="small">{{ row.type }}</el-tag>
@@ -148,7 +150,7 @@ function formatDate(iso: string) {
             </el-table>
 
             <h4>步骤差异</h4>
-            <el-table :data="diffResult.process_diffs.filter(d => d.type !== 'unchanged')" size="small">
+            <el-table :data="(diffResult.process_diffs ?? []).filter(d => d.type !== 'unchanged')" size="small">
               <el-table-column label="类型" width="80">
                 <template #default="{ row }">
                   <el-tag :type="diffTagType(row.type)" size="small">{{ row.type }}</el-tag>

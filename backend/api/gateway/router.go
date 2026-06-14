@@ -33,6 +33,12 @@ var AllRoutes = []Route{
 	{http.MethodGet, "/recipes/:id/versions/:version_id", "delicious.v1.RecipeService", "GetVersion"},
 	{http.MethodGet, "/recipes/:id/diff", "delicious.v1.RecipeService", "CompareVersions"},
 	{http.MethodGet, "/recipes/:id/diff/encyclopedia", "delicious.v1.RecipeService", "CompareWithEncyclopedia"},
+	{http.MethodGet, "/recipes/:id/compare-encyclopedia", "delicious.v1.RecipeService", "CompareWithEncyclopedia"},
+
+	// Upload
+	{http.MethodPost, "/upload", "", "Upload"},
+	{http.MethodPost, "/upload/image", "", "Upload"},
+	{http.MethodPost, "/upload/batch", "", "UploadMultiple"},
 
 	// Dashboard
 	{http.MethodGet, "/dashboard/stats", "delicious.v1.DashboardService", "GetStats"},

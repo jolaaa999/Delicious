@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { deleteRecipe, listRecipes } from '@/api'
+import { resolveImageUrl } from '@/api/upload'
 import type { RecipeListItem } from '@/types'
 
 const router = useRouter()
@@ -86,7 +87,7 @@ function formatDate(iso: string) {
           <template #default="{ row }">
             <el-image
               v-if="row.cover_image_url"
-              :src="row.cover_image_url"
+              :src="resolveImageUrl(row.cover_image_url)"
               fit="cover"
               style="width: 48px; height: 48px; border-radius: 6px"
             />
