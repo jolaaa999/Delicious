@@ -20,7 +20,7 @@ type MyRecipe struct {
 	DeletedAt            gorm.DeletedAt `gorm:"index:idx_my_recipes_deleted_at" json:"-"`
 
 	User               User                `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"user,omitempty"`
-	CurrentVersion     *RecipeVersion      `gorm:"foreignKey:CurrentVersionID;constraint:OnDelete:SET NULL" json:"current_version,omitempty"`
+	CurrentVersion     *RecipeVersion      `gorm:"foreignKey:CurrentVersionID;constraint:-" json:"current_version,omitempty"`
 	EncyclopediaRecipe *EncyclopediaRecipe `gorm:"foreignKey:EncyclopediaRecipeID;constraint:OnDelete:SET NULL" json:"encyclopedia_recipe,omitempty"`
 	Versions           []RecipeVersion     `gorm:"foreignKey:RecipeID" json:"versions,omitempty"`
 }

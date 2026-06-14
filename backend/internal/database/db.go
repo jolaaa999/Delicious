@@ -27,12 +27,15 @@ func Connect(databaseURL string) (*gorm.DB, error) {
 }
 
 func AutoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
+	// 先建被引用表，再建含外键的表；my_recipes ↔ recipe_versions 的 current_version_id 不设 DB 外键，避免循环依赖。
+	if err := db.AutoMigrate(
 		&model.User{},
 		&model.EncyclopediaRecipe{},
 		&model.MyRecipe{},
-		&model.RecipeVersion{},
-	)
+	); err != nil {
+		return err
+	}
+	return db.AutoMigrate(&model.RecipeVersion{})
 }
 
 func Seed(db *gorm.DB, defaultUID uint64) error {
