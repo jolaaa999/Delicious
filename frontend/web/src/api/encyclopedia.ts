@@ -5,7 +5,7 @@ export function searchEncyclopedia(params: Record<string, unknown>) {
   return client.get<unknown, { items: EncyclopediaListItem[] }>('/encyclopedia/search', { params })
 }
 
-export function getEncyclopedia(id: number) {
+export function getEncyclopedia(id: number, params?: { lang?: string }) {
   return client.get<unknown, {
     recipe: {
       id: number
@@ -13,8 +13,9 @@ export function getEncyclopedia(id: number) {
       description?: string
       category?: string
       tags?: string[]
+      source?: string
       ingredients: Ingredient[]
       process_steps: ProcessStep[]
     }
-  }>(`/encyclopedia/${id}`)
+  }>(`/encyclopedia/${id}`, { params })
 }

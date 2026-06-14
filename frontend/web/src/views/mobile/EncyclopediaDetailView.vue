@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getEncyclopedia } from '@/api/encyclopedia'
+import LangSwitch from '@/components/mobile/LangSwitch.vue'
 import type { Ingredient, ProcessStep } from '@/types/recipe'
 
 interface EncyclopediaDetail {
@@ -21,6 +22,12 @@ const id = Number(route.params.id)
 
 const recipe = ref<EncyclopediaDetail | null>(null)
 const loading = ref(true)
+const translating = ref(false)
+const displayLang = ref<'en' | 'zh'>(
+  route.query.lang === 'en' ? 'en' : 'zh',
+)
+const recipeCache = ref<Partial<Record<'en' | 'zh', EncyclopediaDetail>>>({})
+const ready = ref(false)
 
 const sourceLabel = computed(() => {
   const src = recipe.value?.source
@@ -31,15 +38,58 @@ const sourceLabel = computed(() => {
   return `来源：${src}`
 })
 
-onMounted(async () => {
+function detectDefaultLang(name: string): 'en' | 'zh' {
+  const chinese = (name.match(/[\u4e00-\u9fff]/g) || []).length
+  const latin = (name.match(/[a-zA-Z]/g) || []).length
+  return chinese > latin ? 'zh' : 'en'
+}
+
+async function loadRecipe(lang: 'en' | 'zh', options?: { silent?: boolean }) {
+  if (recipeCache.value[lang]) {
+    recipe.value = recipeCache.value[lang]
+    return
+  }
+  if (!options?.silent) {
+    translating.value = true
+  }
   try {
-    const res = await getEncyclopedia(id) as { recipe: EncyclopediaDetail }
+    const res = await getEncyclopedia(id, { lang }) as { recipe: EncyclopediaDetail }
+    recipeCache.value[lang] = res.recipe
     recipe.value = res.recipe
   } catch {
-    recipe.value = null
+    if (!recipe.value) recipe.value = null
+  } finally {
+    translating.value = false
+  }
+}
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const initialLang = route.query.lang === 'en' || route.query.lang === 'zh'
+      ? route.query.lang as 'en' | 'zh'
+      : null
+    if (initialLang) {
+      displayLang.value = initialLang
+      await loadRecipe(initialLang, { silent: true })
+    } else {
+      await loadRecipe('en', { silent: true })
+      if (recipe.value) {
+        displayLang.value = detectDefaultLang(recipe.value.name)
+        if (displayLang.value === 'zh') {
+          await loadRecipe('zh')
+        }
+      }
+    }
   } finally {
     loading.value = false
+    ready.value = true
   }
+})
+
+watch(displayLang, async (lang) => {
+  if (!ready.value) return
+  await loadRecipe(lang)
 })
 
 function goBack() {
@@ -56,12 +106,15 @@ function addToKitchen() {
     <header class="nav-bar">
       <button class="nav-bar__back" aria-label="返回" @click="goBack">←</button>
       <span class="nav-bar__title">{{ recipe?.name ?? '百科详情' }}</span>
+      <LangSwitch v-if="recipe" v-model="displayLang" :disabled="translating" />
     </header>
 
     <div v-if="loading" class="state-msg">加载中…</div>
     <div v-else-if="!recipe" class="state-msg">未找到该菜谱</div>
 
     <template v-else>
+      <div v-if="translating" class="translate-hint">正在翻译…</div>
+
       <section class="hero">
         <div class="hero__info">
           <h1 class="hero__name">{{ recipe.name }}</h1>

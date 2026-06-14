@@ -20,7 +20,7 @@ func NewEncyclopediaHandler(svc *service.EncyclopediaService) *EncyclopediaHandl
 func (h *EncyclopediaHandler) Search(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	items, pageInfo, err := h.svc.Search(c.Query("keyword"), c.Query("category"), page, pageSize)
+	items, pageInfo, err := h.svc.Search(c.Query("keyword"), c.Query("category"), c.Query("lang"), page, pageSize)
 	if err != nil {
 		middleware.InternalError(c, err)
 		return
@@ -33,7 +33,7 @@ func (h *EncyclopediaHandler) Get(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	recipe, err := h.svc.Get(id)
+	recipe, err := h.svc.Get(id, c.Query("lang"))
 	if err != nil {
 		handleRepoErr(c, err)
 		return
@@ -44,7 +44,7 @@ func (h *EncyclopediaHandler) Get(c *gin.Context) {
 func (h *EncyclopediaHandler) ListByCategory(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	items, pageInfo, err := h.svc.ListByCategory(c.Param("category"), page, pageSize)
+	items, pageInfo, err := h.svc.ListByCategory(c.Param("category"), c.Query("lang"), page, pageSize)
 	if err != nil {
 		middleware.InternalError(c, err)
 		return

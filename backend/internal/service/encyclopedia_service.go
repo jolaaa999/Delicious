@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"math"
+	"net/http"
+	"time"
 
 	"github.com/delicious/delicious/internal/config"
 	"github.com/delicious/delicious/internal/dto"
@@ -11,21 +13,23 @@ import (
 )
 
 type EncyclopediaService struct {
-	repo   *repository.EncyclopediaRepository
-	online *OnlineRecipeSearch
+	repo       *repository.EncyclopediaRepository
+	online     *OnlineRecipeSearch
+	httpClient *http.Client
 }
 
 func NewEncyclopediaService(repo *repository.EncyclopediaRepository, cfg config.Config) *EncyclopediaService {
 	return &EncyclopediaService{
-		repo:   repo,
-		online: NewOnlineRecipeSearch(cfg),
+		repo:       repo,
+		online:     NewOnlineRecipeSearch(cfg),
+		httpClient: &http.Client{Timeout: 15 * time.Second},
 	}
 }
 
-func (s *EncyclopediaService) Search(keyword, category string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
+func (s *EncyclopediaService) Search(keyword, category, lang string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
 	if keyword != "" && category == "" && s.online.Enabled() {
 		if items, pageInfo, err := s.searchOnline(keyword, page, pageSize); err == nil && len(items) > 0 {
-			return items, pageInfo, nil
+			return s.applyListLang(context.Background(), items, lang), pageInfo, nil
 		}
 	}
 
@@ -38,7 +42,8 @@ func (s *EncyclopediaService) Search(keyword, category string, page, pageSize in
 	if err != nil {
 		return nil, dto.PageInfo{}, err
 	}
-	return toListDTOs(items, page, pageSize, total), pageInfoFrom(page, pageSize, total), nil
+	list := toListDTOs(items, page, pageSize, total)
+	return s.applyListLang(context.Background(), list, lang), pageInfoFrom(page, pageSize, total), nil
 }
 
 func (s *EncyclopediaService) searchOnline(keyword string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
@@ -57,7 +62,7 @@ func (s *EncyclopediaService) searchOnline(keyword string, page, pageSize int) (
 	return items, pageInfoFrom(page, pageSize, int64(total)), nil
 }
 
-func (s *EncyclopediaService) Get(id uint64) (*dto.EncyclopediaRecipeDTO, error) {
+func (s *EncyclopediaService) Get(id uint64, lang string) (*dto.EncyclopediaRecipeDTO, error) {
 	e, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -70,7 +75,7 @@ func (s *EncyclopediaService) Get(id uint64) (*dto.EncyclopediaRecipeDTO, error)
 		}
 	}
 	out := toEncyclopediaDetailDTO(e)
-	return &out, nil
+	return s.applyRecipeLang(context.Background(), &out, lang), nil
 }
 
 func (s *EncyclopediaService) shouldRefreshOnline(e *model.EncyclopediaRecipe) bool {
@@ -80,8 +85,8 @@ func (s *EncyclopediaService) shouldRefreshOnline(e *model.EncyclopediaRecipe) b
 	return len(e.Ingredients) == 0 || len(e.ProcessSteps) == 0
 }
 
-func (s *EncyclopediaService) ListByCategory(category string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
-	return s.Search("", category, page, pageSize)
+func (s *EncyclopediaService) ListByCategory(category, lang string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
+	return s.Search("", category, lang, page, pageSize)
 }
 
 func toListDTOs(items []model.EncyclopediaRecipe, page, pageSize int, total int64) []dto.EncyclopediaListItemDTO {

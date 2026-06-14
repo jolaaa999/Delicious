@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { searchEncyclopedia } from '@/api/encyclopedia'
 import { resolveImageUrl } from '@/api/upload'
+import LangSwitch from '@/components/mobile/LangSwitch.vue'
 import type { EncyclopediaListItem } from '@/types/recipe'
 
 const router = useRouter()
@@ -11,6 +12,7 @@ const items = ref<EncyclopediaListItem[]>([])
 const loading = ref(false)
 const searched = ref(false)
 const searchError = ref('')
+const displayLang = ref<'en' | 'zh'>('zh')
 
 async function handleSearch() {
   if (!keyword.value.trim()) return
@@ -18,7 +20,12 @@ async function handleSearch() {
   searched.value = true
   searchError.value = ''
   try {
-    const res = await searchEncyclopedia({ keyword: keyword.value.trim(), page: 1, page_size: 20 })
+    const res = await searchEncyclopedia({
+      keyword: keyword.value.trim(),
+      page: 1,
+      page_size: 20,
+      lang: displayLang.value,
+    })
     items.value = res.items ?? []
   } catch (e: unknown) {
     items.value = []
@@ -28,17 +35,28 @@ async function handleSearch() {
   }
 }
 
+watch(displayLang, () => {
+  if (searched.value && keyword.value.trim()) {
+    handleSearch()
+  }
+})
+
 function goDetail(id: number) {
-  router.push(`/m/inspiration/${id}`)
+  router.push({ path: `/m/inspiration/${id}`, query: { lang: displayLang.value } })
 }
 </script>
 
 <template>
   <div class="page inspiration-page">
     <header class="page-header">
-      <p class="page-eyebrow">Delicious</p>
-      <h1 class="page-title">找灵感</h1>
-      <p class="page-subtitle">联网搜索公开菜谱，发现新味道</p>
+      <div class="page-header__row">
+        <div>
+          <p class="page-eyebrow">Delicious</p>
+          <h1 class="page-title">找灵感</h1>
+          <p class="page-subtitle">联网搜索公开菜谱，发现新味道</p>
+        </div>
+        <LangSwitch v-model="displayLang" :disabled="loading" />
+      </div>
     </header>
 
     <div class="search-card">

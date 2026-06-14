@@ -63,12 +63,25 @@ func expandSearchKeywords(ctx context.Context, client *http.Client, keyword stri
 }
 
 func translateZhToEn(ctx context.Context, client *http.Client, text string) (string, error) {
+	return translateWithPair(ctx, client, text, "zh-CN|en")
+}
+
+func translateEnToZh(ctx context.Context, client *http.Client, text string) (string, error) {
+	return translateWithPair(ctx, client, text, "en|zh-CN")
+}
+
+func translateWithPair(ctx context.Context, client *http.Client, text, langPair string) (string, error) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return text, nil
+	}
 	if client == nil {
 		client = http.DefaultClient
 	}
 	rawURL := fmt.Sprintf(
-		"https://api.mymemory.translated.net/get?q=%s&langpair=zh-CN|en",
+		"https://api.mymemory.translated.net/get?q=%s&langpair=%s",
 		url.QueryEscape(text),
+		langPair,
 	)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
@@ -99,4 +112,47 @@ func translateZhToEn(ctx context.Context, client *http.Client, text string) (str
 		return "", fmt.Errorf("empty translation")
 	}
 	return translated, nil
+}
+
+// translateLongText 分段翻译，避免免费 API 单条长度限制。
+func translateLongText(ctx context.Context, client *http.Client, text, langPair string) (string, error) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return text, nil
+	}
+	const chunkSize = 400
+	if len(text) <= chunkSize {
+		out, err := translateWithPair(ctx, client, text, langPair)
+		if err != nil {
+			return text, err
+		}
+		return out, nil
+	}
+	parts := splitTextChunks(text, chunkSize)
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		translated, err := translateWithPair(ctx, client, part, langPair)
+		if err != nil {
+			out = append(out, part)
+			continue
+		}
+		out = append(out, translated)
+	}
+	return strings.Join(out, "\n"), nil
+}
+
+func splitTextChunks(text string, maxLen int) []string {
+	if len(text) <= maxLen {
+		return []string{text}
+	}
+	var chunks []string
+	runes := []rune(text)
+	for i := 0; i < len(runes); i += maxLen {
+		end := i + maxLen
+		if end > len(runes) {
+			end = len(runes)
+		}
+		chunks = append(chunks, string(runes[i:end]))
+	}
+	return chunks
 }
