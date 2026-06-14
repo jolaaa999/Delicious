@@ -1,8 +1,8 @@
 import client from './client'
-import type { Ingredient, ProcessStep } from '@/types/recipe'
+import type { EncyclopediaListItem, Ingredient, ProcessStep } from '@/types/recipe'
 
 export function searchEncyclopedia(params: Record<string, unknown>) {
-  return client.get<unknown, { items: unknown[] }>('/encyclopedia', { params })
+  return client.get<unknown, { items: EncyclopediaListItem[] }>('/encyclopedia', { params })
 }
 
 export function getEncyclopedia(id: number) {

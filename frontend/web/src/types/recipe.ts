@@ -11,6 +11,14 @@ export interface ProcessStep {
   duration_minutes?: number
 }
 
+export interface EncyclopediaListItem {
+  id: number
+  name: string
+  description?: string
+  category?: string
+  cover_image_url?: string
+}
+
 export interface RecipeVersion {
   id: number
   recipe_id: number
