@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getRecipe } from '@/api/recipe'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { deleteRecipe, getRecipe } from '@/api/recipe'
 import { useRecipeDiff, getDemoRecipe } from '@/composables/useRecipeDiff'
+import { useRecipeStore } from '@/stores/recipe'
 import type { MyRecipe } from '@/types/recipe'
 import type { VersionListItem } from '@/types/diff'
 import VersionHistoryDrawer from '@/components/diff/VersionHistoryDrawer.vue'
@@ -15,7 +17,10 @@ const recipeId = Number(route.params.id)
 
 const recipe = ref<MyRecipe | null>(null)
 const loading = ref(true)
+const deleting = ref(false)
+const fromApi = ref(false)
 const showUnchanged = ref(false)
+const store = useRecipeStore()
 
 const {
   versions,
@@ -45,6 +50,7 @@ onMounted(async () => {
   try {
     const res = await getRecipe(recipeId)
     recipe.value = res.recipe
+    fromApi.value = true
   } catch {
     recipe.value = getDemoRecipe()
   } finally {
@@ -75,6 +81,31 @@ async function onSelectVersion(ver: VersionListItem) {
 async function onCompareEncyclopedia() {
   if (!currentVersion.value || !recipe.value) return
   await compareEncyclopedia(currentVersion.value, recipe.value.name)
+}
+
+async function handleDelete() {
+  if (!recipe.value || !fromApi.value) return
+  try {
+    await ElMessageBox.confirm(
+      `确定删除「${recipe.value.name}」？删除后无法恢复。`,
+      '确认删除',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+
+  deleting.value = true
+  try {
+    await deleteRecipe(recipeId)
+    store.items = store.items.filter((item) => item.id !== recipeId)
+    ElMessage.success('已删除')
+    router.replace('/m/kitchen')
+  } catch (e: unknown) {
+    ElMessage.error((e as { message?: string })?.message || '删除失败')
+  } finally {
+    deleting.value = false
+  }
 }
 </script>
 
@@ -150,6 +181,17 @@ async function onCompareEncyclopedia() {
             <span class="step-item__text">{{ step.content }}</span>
           </li>
         </ol>
+      </section>
+
+      <section v-if="fromApi" class="danger-section">
+        <button
+          type="button"
+          class="delete-btn"
+          :disabled="deleting"
+          @click="handleDelete"
+        >
+          {{ deleting ? '删除中…' : '删除此菜品' }}
+        </button>
       </section>
     </template>
 

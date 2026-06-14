@@ -791,6 +791,36 @@
   cursor: not-allowed;
 }
 
+.danger-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.delete-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid rgba(193, 102, 107, 0.35);
+  border-radius: var(--radius-lg);
+  background: rgba(193, 102, 107, 0.08);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-danger);
+  cursor: pointer;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+
+.delete-btn:active:not(:disabled) {
+  background: rgba(193, 102, 107, 0.16);
+}
+
+.delete-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* ── 星级评分 ── */
 .star-rating {
   display: flex;

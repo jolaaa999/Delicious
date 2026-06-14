@@ -44,3 +44,7 @@ export function compareWithEncyclopedia(recipeId: number) {
     `/recipes/${recipeId}/diff/encyclopedia`,
   )
 }
+
+export function deleteRecipe(id: number) {
+  return client.delete(`/recipes/${id}`)
+}
