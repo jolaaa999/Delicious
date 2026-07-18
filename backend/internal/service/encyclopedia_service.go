@@ -96,6 +96,12 @@ func (s *EncyclopediaService) Get(id uint64, lang string) (*dto.EncyclopediaReci
 		}
 	}
 	out := toEncyclopediaDetailDTO(e)
+	if out.Ingredients == nil {
+		out.Ingredients = []dto.Ingredient{}
+	}
+	if out.ProcessSteps == nil {
+		out.ProcessSteps = []dto.ProcessStep{}
+	}
 	return s.applyRecipeLang(ctx, &out, lang), nil
 }
 
@@ -103,7 +109,14 @@ func (s *EncyclopediaService) shouldRefreshOnline(e *model.EncyclopediaRecipe) b
 	if e.ExternalSource == nil || e.ExternalID == nil || !s.online.Enabled() {
 		return false
 	}
-	return len(e.Ingredients) == 0 || len(e.ProcessSteps) == 0
+	if len(e.Ingredients) == 0 || len(e.ProcessSteps) == 0 {
+		return true
+	}
+	// Forkify 等源搜索阶段可能只有占位步骤，进入详情时补全
+	if len(e.ProcessSteps) == 1 && strings.Contains(e.ProcessSteps[0].Content, "参考原菜谱") {
+		return true
+	}
+	return false
 }
 
 func (s *EncyclopediaService) ListByCategory(category, lang string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {

@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/delicious/delicious/internal/dto"
+	"github.com/delicious/delicious/pkg/cache"
 )
 
-const listTranslateTimeout = 25 * time.Second
+const listTranslateTimeout = 45 * time.Second
 
 func (s *EncyclopediaService) applyListLang(ctx context.Context, items []dto.EncyclopediaListItemDTO, lang string) []dto.EncyclopediaListItemDTO {
 	lang = normalizeDisplayLang(lang)
@@ -25,7 +26,7 @@ func (s *EncyclopediaService) applyListLang(ctx context.Context, items []dto.Enc
 	defer cancel()
 
 	client := s.translateClient()
-	const maxWorkers = 6
+	const maxWorkers = 4
 	sem := make(chan struct{}, maxWorkers)
 	var wg sync.WaitGroup
 
@@ -42,13 +43,41 @@ func (s *EncyclopediaService) applyListLang(ctx context.Context, items []dto.Enc
 			case <-ctx.Done():
 				return
 			}
-			if translated, err := CachedTranslate(ctx, s.transCache, client, out[idx].Name, "en|zh-CN"); err == nil {
+			if translated := translateWithRetry(ctx, s.transCache, client, out[idx].Name, "en|zh-CN"); translated != "" {
 				out[idx].Name = translated
+			}
+			if out[idx].Description != nil && !isMostlyChinese(*out[idx].Description) {
+				if desc := translateWithRetry(ctx, s.transCache, client, *out[idx].Description, "en|zh-CN"); desc != "" {
+					out[idx].Description = &desc
+				}
 			}
 		}(i)
 	}
 	wg.Wait()
 	return out
+}
+
+func translateWithRetry(ctx context.Context, c *cache.MemoryCache, client *http.Client, text, langPair string) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return ""
+	}
+	var last string
+	for attempt := 0; attempt < 3; attempt++ {
+		if ctx.Err() != nil {
+			return last
+		}
+		translated, err := CachedTranslate(ctx, c, client, text, langPair)
+		if err == nil && strings.TrimSpace(translated) != "" {
+			return translated
+		}
+		select {
+		case <-ctx.Done():
+			return last
+		case <-time.After(time.Duration(150*(attempt+1)) * time.Millisecond):
+		}
+	}
+	return last
 }
 
 func normalizeDisplayLang(lang string) string {

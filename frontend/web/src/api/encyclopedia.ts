@@ -33,7 +33,17 @@ export interface EncyclopediaDetail {
 }
 
 export function getEncyclopedia(id: number, params?: { lang?: string }) {
-  return client.get<unknown, EncyclopediaDetail['recipe']>(`/encyclopedia/${id}`, { params, timeout: DETAIL_TIMEOUT_MS })
+  return client
+    .get<unknown, EncyclopediaDetail | EncyclopediaDetail['recipe']>(`/encyclopedia/${id}`, {
+      params,
+      timeout: DETAIL_TIMEOUT_MS,
+    })
+    .then((res) => {
+      if (res && typeof res === 'object' && 'recipe' in res && res.recipe) {
+        return res.recipe
+      }
+      return res as EncyclopediaDetail['recipe']
+    })
 }
 
 export function listByCategory(category: string, params?: Record<string, unknown>) {

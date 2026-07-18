@@ -30,6 +30,7 @@ const displayLang = ref<'en' | 'zh'>(
 const recipeCache = ref<Partial<Record<'en' | 'zh', EncyclopediaDetail>>>({})
 const ready = ref(false)
 const tags = ref<TagDTO[]>([])
+const loadError = ref('')
 
 async function loadTags() {
   try {
@@ -50,15 +51,10 @@ const sourceLabel = computed(() => {
   return `来源：${src}`
 })
 
-function detectDefaultLang(name: string): 'en' | 'zh' {
-  const chinese = (name.match(/[\u4e00-\u9fff]/g) || []).length
-  const latin = (name.match(/[a-zA-Z]/g) || []).length
-  return chinese > latin ? 'zh' : 'en'
-}
-
 async function loadRecipe(lang: 'en' | 'zh', options?: { silent?: boolean }) {
   if (recipeCache.value[lang]) {
     recipe.value = recipeCache.value[lang]
+    loadError.value = ''
     return
   }
   if (!options?.silent) {
@@ -66,10 +62,26 @@ async function loadRecipe(lang: 'en' | 'zh', options?: { silent?: boolean }) {
   }
   try {
     const res = await getEncyclopedia(id, { lang })
-    recipeCache.value[lang] = res
-    recipe.value = res
-  } catch {
+    if (!res?.name) {
+      throw new Error('菜谱内容为空')
+    }
+    const normalized: EncyclopediaDetail = {
+      id: res.id,
+      name: res.name,
+      description: res.description,
+      category: res.category,
+      tags: res.tags,
+      source: res.source,
+      ingredients: res.ingredients ?? [],
+      process_steps: res.process_steps ?? [],
+    }
+    recipeCache.value[lang] = normalized
+    recipe.value = normalized
+    loadError.value = ''
+  } catch (e: unknown) {
     if (!recipe.value) recipe.value = null
+    const msg = (e as { message?: string })?.message || ''
+    loadError.value = msg || '加载失败，请稍后重试'
   } finally {
     translating.value = false
   }
@@ -80,19 +92,9 @@ onMounted(async () => {
   try {
     const initialLang = route.query.lang === 'en' || route.query.lang === 'zh'
       ? route.query.lang as 'en' | 'zh'
-      : null
-    if (initialLang) {
-      displayLang.value = initialLang
-      await loadRecipe(initialLang, { silent: true })
-    } else {
-      await loadRecipe('en', { silent: true })
-      if (recipe.value) {
-        displayLang.value = detectDefaultLang(recipe.value.name)
-        if (displayLang.value === 'zh') {
-          await loadRecipe('zh')
-        }
-      }
-    }
+      : 'zh'
+    displayLang.value = initialLang
+    await loadRecipe(initialLang, { silent: true })
   } finally {
     loading.value = false
     ready.value = true
@@ -123,7 +125,7 @@ function addToKitchen() {
     </header>
 
     <div v-if="loading" class="state-msg">加载中…</div>
-    <div v-else-if="!recipe" class="state-msg">未找到该菜谱</div>
+    <div v-else-if="!recipe" class="state-msg">{{ loadError || '未找到该菜谱' }}</div>
 
     <template v-else>
       <div v-if="translating" class="translate-hint">正在翻译…</div>
