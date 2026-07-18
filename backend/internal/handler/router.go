@@ -42,6 +42,7 @@ func Register(r *gin.Engine, cfg config.Config, h Handlers) {
 	v1.POST("/upload", h.Upload.Upload)
 	v1.POST("/upload/image", h.Upload.Upload) // 兼容旧版前端路径
 	v1.POST("/upload/batch", h.Upload.UploadMultiple)
+	v1.GET("/media", h.Upload.ProxyMedia)
 
 	// Encyclopedia
 	v1.GET("/encyclopedia/search", h.Encyclopedia.Search)

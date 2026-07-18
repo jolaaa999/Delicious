@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"io"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/delicious/delicious/internal/middleware"
 	"github.com/delicious/delicious/internal/repository"
@@ -40,6 +43,37 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+// ProxyMedia 代理 private Blob，使前端 <img> 可直接展示
+func (h *UploadHandler) ProxyMedia(c *gin.Context) {
+	raw := c.Query("url")
+	if raw == "" {
+		middleware.BadRequest(c, "缺少 url 参数")
+		return
+	}
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") {
+		middleware.BadRequest(c, "无效的图片地址")
+		return
+	}
+	host := strings.ToLower(u.Hostname())
+	if !strings.HasSuffix(host, ".blob.vercel-storage.com") {
+		middleware.BadRequest(c, "仅允许代理 Vercel Blob 地址")
+		return
+	}
+
+	body, contentType, err := h.svc.FetchBlob(u.String())
+	if err != nil {
+		middleware.BadRequest(c, err.Error())
+		return
+	}
+	defer body.Close()
+
+	c.Header("Content-Type", contentType)
+	c.Header("Cache-Control", "private, max-age=86400")
+	c.Status(http.StatusOK)
+	_, _ = io.Copy(c.Writer, body)
 }
 
 // UploadMultiple 批量上传图片

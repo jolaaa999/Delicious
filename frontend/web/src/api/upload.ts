@@ -10,6 +10,15 @@ export function uploadImage(file: File) {
 
 export function resolveImageUrl(url?: string) {
   if (!url) return ''
+
+  const base = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+  const apiBase = base.replace(/\/$/, '')
+
+  // Private Blob 不能在浏览器直接访问，走后端代理
+  if (/^https?:\/\/[^/]+\.private\.blob\.vercel-storage\.com\//i.test(url)) {
+    return `${apiBase}/media?url=${encodeURIComponent(url)}`
+  }
+
   if (/^https?:\/\//i.test(url)) return url
 
   const normalized = url.startsWith('/') ? url : `/${url}`
@@ -19,6 +28,5 @@ export function resolveImageUrl(url?: string) {
     return origin ? `${origin.replace(/\/$/, '')}${normalized}` : normalized
   }
 
-  const base = import.meta.env.VITE_API_BASE_URL || '/api/v1'
-  return `${base.replace(/\/$/, '')}${normalized}`
+  return `${apiBase}${normalized}`
 }

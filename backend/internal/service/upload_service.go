@@ -130,8 +130,11 @@ func (s *UploadService) saveToBlob(data []byte, mime, ext, originalName string, 
 	req.Header.Set("x-api-version", "7")
 	req.Header.Set("x-content-type", mime)
 	req.Header.Set("x-add-random-suffix", "0")
-	// 菜品图需在浏览器直接展示，必须使用 Public store，并与 access 声明一致
-	req.Header.Set("x-vercel-blob-access", "public")
+	access := s.cfg.BlobAccess
+	if access == "" {
+		access = "private"
+	}
+	req.Header.Set("x-vercel-blob-access", access)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -159,6 +162,33 @@ func (s *UploadService) saveToBlob(data []byte, mime, ext, originalName string, 
 		Filename: originalName,
 		Size:     size,
 	}, nil
+}
+
+// FetchBlob 通过 token 拉取 private Blob，供媒体代理使用。
+func (s *UploadService) FetchBlob(blobURL string) (body io.ReadCloser, contentType string, err error) {
+	if s.cfg.BlobToken == "" {
+		return nil, "", fmt.Errorf("未配置 Blob token")
+	}
+	req, err := http.NewRequest(http.MethodGet, blobURL, nil)
+	if err != nil {
+		return nil, "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+s.cfg.BlobToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("读取 Blob 失败: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		defer resp.Body.Close()
+		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, "", fmt.Errorf("读取 Blob 失败 (%d): %s", resp.StatusCode, string(msg))
+	}
+	ct := resp.Header.Get("Content-Type")
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
+	return resp.Body, ct, nil
 }
 
 func detectMIME(header []byte, filename string) string {

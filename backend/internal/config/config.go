@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -16,6 +17,7 @@ type Config struct {
 	PublicBaseURL string
 	MaxUploadMB   int64
 	BlobToken           string
+	BlobAccess          string // "public" | "private"，须与 Vercel Blob store 创建时的访问模式一致
 	UseBlob             bool
 	SpoonacularAPIKey   string
 	OnlineSearchEnabled bool
@@ -40,6 +42,10 @@ func Load() Config {
 	}
 
 	blobToken := os.Getenv("BLOB_READ_WRITE_TOKEN")
+	blobAccess := strings.ToLower(getEnv("BLOB_ACCESS", "private"))
+	if blobAccess != "public" && blobAccess != "private" {
+		blobAccess = "private"
+	}
 	publicBase := getEnv("PUBLIC_BASE_URL", "")
 	if publicBase == "" {
 		if host := os.Getenv("VERCEL_URL"); host != "" {
@@ -61,6 +67,7 @@ func Load() Config {
 		PublicBaseURL:       publicBase,
 		MaxUploadMB:         maxMB,
 		BlobToken:           blobToken,
+		BlobAccess:          blobAccess,
 		UseBlob:             blobToken != "",
 		SpoonacularAPIKey:   os.Getenv("SPOONACULAR_API_KEY"),
 		OnlineSearchEnabled: getEnv("ENCYCLOPEDIA_ONLINE_SEARCH", "true") == "true",
