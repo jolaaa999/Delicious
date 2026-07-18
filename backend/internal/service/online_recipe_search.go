@@ -29,7 +29,11 @@ func NewOnlineRecipeSearch(cfg config.Config) *OnlineRecipeSearch {
 	if cfg.SpoonacularAPIKey != "" {
 		providers = append(providers, newSpoonacularProvider(cfg.SpoonacularAPIKey, client))
 	}
-	providers = append(providers, newMealDBProvider(client))
+	providers = append(providers,
+		newMealDBProvider(client),
+		newForkifyProvider(client),
+		newDummyJSONProvider(client),
+	)
 	return &OnlineRecipeSearch{
 		providers:  providers,
 		enabled:    cfg.OnlineSearchEnabled,

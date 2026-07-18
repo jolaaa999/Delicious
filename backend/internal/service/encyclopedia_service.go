@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/delicious/delicious/internal/config"
@@ -33,23 +34,32 @@ func (s *EncyclopediaService) Search(keyword, category, lang string, page, pageS
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
 
-	if keyword != "" && category == "" && s.online.Enabled() {
-		if items, pageInfo, err := s.searchOnline(ctx, keyword, page, pageSize); err == nil && len(items) > 0 {
-			return s.applyListLang(ctx, items, lang), pageInfo, nil
-		}
+	if !s.online.Enabled() {
+		return []dto.EncyclopediaListItemDTO{}, pageInfoFrom(page, pageSize, 0), nil
+	}
+	if strings.TrimSpace(keyword) == "" {
+		return []dto.EncyclopediaListItemDTO{}, pageInfoFrom(page, pageSize, 0), nil
 	}
 
-	items, total, err := s.repo.Search(repository.SearchFilter{
-		Keyword:  keyword,
-		Category: category,
-		Page:     page,
-		PageSize: pageSize,
-	})
+	items, pageInfo, err := s.searchOnline(ctx, keyword, page, pageSize)
 	if err != nil {
 		return nil, dto.PageInfo{}, err
 	}
-	list := toListDTOs(items, page, pageSize, total)
-	return s.applyListLang(ctx, list, lang), pageInfoFrom(page, pageSize, total), nil
+	if category != "" {
+		filtered := make([]dto.EncyclopediaListItemDTO, 0, len(items))
+		for _, item := range items {
+			if item.Category != nil && strings.EqualFold(*item.Category, category) {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
+		pageInfo.Total = int64(len(filtered))
+		pageInfo.TotalPages = 1
+		if pageSize > 0 {
+			pageInfo.TotalPages = int(math.Ceil(float64(len(filtered)) / float64(pageSize)))
+		}
+	}
+	return s.applyListLang(ctx, items, lang), pageInfo, nil
 }
 
 func (s *EncyclopediaService) searchOnline(ctx context.Context, keyword string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
@@ -96,14 +106,6 @@ func (s *EncyclopediaService) shouldRefreshOnline(e *model.EncyclopediaRecipe) b
 
 func (s *EncyclopediaService) ListByCategory(category, lang string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
 	return s.Search("", category, lang, page, pageSize)
-}
-
-func toListDTOs(items []model.EncyclopediaRecipe, page, pageSize int, total int64) []dto.EncyclopediaListItemDTO {
-	result := make([]dto.EncyclopediaListItemDTO, 0, len(items))
-	for i := range items {
-		result = append(result, toListItemDTO(&items[i]))
-	}
-	return result
 }
 
 func toListItemDTO(e *model.EncyclopediaRecipe) dto.EncyclopediaListItemDTO {

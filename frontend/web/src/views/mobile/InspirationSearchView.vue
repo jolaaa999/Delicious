@@ -16,6 +16,7 @@ const searchError = ref('')
 const displayLang = ref<'en' | 'zh'>('zh')
 const selectedCategory = ref('')
 const categories = ref<CategoryDTO[]>([])
+const filtersExpanded = ref(true)
 
 onMounted(async () => {
   try {
@@ -53,6 +54,13 @@ async function handleSearch() {
     }
   } finally {
     loading.value = false
+  }
+}
+
+function toggleCategory(name: string) {
+  selectedCategory.value = selectedCategory.value === name ? '' : name
+  if (searched.value && keyword.value.trim()) {
+    handleSearch()
   }
 }
 
@@ -96,16 +104,34 @@ function goDetail(id: number) {
         />
         <button class="search-bar__btn" type="button" @click="handleSearch">搜索</button>
       </div>
-      <p class="search-tip">支持中文菜名，结果来自 Spoonacular / TheMealDB 公开菜谱库</p>
-      <div v-if="categories.length" class="category-chips">
+      <p class="search-tip">支持中文菜名，结果来自 Spoonacular / TheMealDB / Forkify / DummyJSON</p>
+
+      <div
+        v-if="searched && !loading && !searchError && items.length > 0 && categories.length"
+        class="filter-panel"
+      >
         <button
-          v-for="cat in categories"
-          :key="cat.id"
           type="button"
-          class="chip"
-          :class="{ 'chip--active': selectedCategory === cat.name }"
-          @click="selectedCategory = selectedCategory === cat.name ? '' : cat.name"
-        >{{ cat.name }}</button>
+          class="filter-panel__toggle"
+          :aria-expanded="filtersExpanded"
+          @click="filtersExpanded = !filtersExpanded"
+        >
+          <span class="filter-panel__label">
+            分类筛选
+            <span v-if="selectedCategory" class="filter-panel__active">· {{ selectedCategory }}</span>
+          </span>
+          <span class="filter-panel__chevron" :class="{ 'filter-panel__chevron--open': filtersExpanded }">▾</span>
+        </button>
+        <div v-show="filtersExpanded" class="category-chips">
+          <button
+            v-for="cat in categories"
+            :key="cat.id"
+            type="button"
+            class="chip"
+            :class="{ 'chip--active': selectedCategory === cat.name }"
+            @click="toggleCategory(cat.name)"
+          >{{ cat.name }}</button>
+        </div>
       </div>
     </div>
 
