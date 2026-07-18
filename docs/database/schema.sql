@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `encyclopedia_recipes` (
     `id`              BIGINT UNSIGNED   NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `name`            VARCHAR(128)      NOT NULL COMMENT '菜名',
+    `encyclopedia_recipes_name`            VARCHAR(128)      NOT NULL COMMENT '菜名',
     `description`     TEXT              DEFAULT NULL COMMENT '简介',
     `cover_image_url` VARCHAR(512)      DEFAULT NULL COMMENT '封面图',
     `category`        VARCHAR(64)       DEFAULT NULL COMMENT '分类',
@@ -45,9 +45,9 @@ CREATE TABLE IF NOT EXISTS `encyclopedia_recipes` (
     `created_at`      DATETIME(3)       NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at`      DATETIME(3)       NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (`id`),
-    KEY `idx_encyclopedia_name` (`name`),
+    KEY `idx_encyclopedia_name` (`encyclopedia_recipes_name`),
     KEY `idx_encyclopedia_category` (`category`),
-    FULLTEXT KEY `ft_encyclopedia_name_desc` (`name`, `description`)
+    FULLTEXT KEY `ft_encyclopedia_name_desc` (`encyclopedia_recipes_name`, `description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='百科菜谱表';
 
 -- -----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS `encyclopedia_recipes` (
 CREATE TABLE IF NOT EXISTS `my_recipes` (
     `id`                     BIGINT UNSIGNED   NOT NULL AUTO_INCREMENT COMMENT '主键',
     `user_id`                BIGINT UNSIGNED   NOT NULL COMMENT '所属用户',
-    `name`                   VARCHAR(128)      NOT NULL COMMENT '菜名',
+    `encyclopedia_recipes_name`                   VARCHAR(128)      NOT NULL COMMENT '菜名',
     `current_version_id`     BIGINT UNSIGNED   DEFAULT NULL COMMENT '当前生效版本 ID（指向 recipe_versions）',
     `user_rating`            TINYINT UNSIGNED  DEFAULT NULL COMMENT '个人评分 1-5 星',
     `cover_image_url`        VARCHAR(512)      DEFAULT NULL COMMENT '列表封面（通常取当前版本首图）',

@@ -20,7 +20,7 @@ export function searchEncyclopedia(params: Record<string, unknown>) {
 export interface EncyclopediaDetail {
   recipe: {
     id: number
-    name: string
+    encyclopedia_recipes_name: string
     description?: string
     cover_image_url?: string
     category?: string

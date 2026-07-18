@@ -67,7 +67,7 @@ func (r *RecipeRepository) AddVersion(recipe *model.MyRecipe, version *model.Rec
 		}
 		cover := pickCover(version.Images, recipe.CoverImageURL)
 		updates := map[string]interface{}{
-			"name":                 recipe.Name,
+			"encyclopedia_recipes_name": recipe.Name,
 			"current_version_id":   version.ID,
 			"cover_image_url":      cover,
 			"encyclopedia_recipe_id": recipe.EncyclopediaRecipeID,

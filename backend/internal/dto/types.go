@@ -31,7 +31,7 @@ type RecipeVersionDTO struct {
 type MyRecipeDTO struct {
 	ID                   uint64            `json:"id"`
 	UserID               uint64            `json:"user_id"`
-	Name                 string            `json:"name"`
+	Name                 string            `json:"recipe_name"`
 	CurrentVersionID     uint64            `json:"current_version_id"`
 	UserRating           uint8             `json:"user_rating"`
 	CoverImageURL        *string           `json:"cover_image_url,omitempty"`
@@ -43,7 +43,7 @@ type MyRecipeDTO struct {
 
 type RecipeListItemDTO struct {
 	ID                    uint64    `json:"id"`
-	Name                  string    `json:"name"`
+	Name                  string    `json:"recipe_name"`
 	CoverImageURL         *string   `json:"cover_image_url,omitempty"`
 	UserRating            uint8     `json:"user_rating"`
 	CurrentVersionNumber  uint32    `json:"current_version_number"`
@@ -59,7 +59,7 @@ type VersionListItemDTO struct {
 }
 
 type CreateRecipeRequest struct {
-	Name                 string        `json:"name" binding:"required"`
+	Name                 string        `json:"recipe_name" binding:"required"`
 	Ingredients          []Ingredient  `json:"ingredients" binding:"required"`
 	ProcessSteps         []ProcessStep `json:"process_steps" binding:"required"`
 	ProcessText          *string       `json:"process_text"`
@@ -70,7 +70,7 @@ type CreateRecipeRequest struct {
 }
 
 type UpdateRecipeRequest struct {
-	Name                 string        `json:"name" binding:"required"`
+	Name                 string        `json:"recipe_name" binding:"required"`
 	Ingredients          []Ingredient  `json:"ingredients" binding:"required"`
 	ProcessSteps         []ProcessStep `json:"process_steps" binding:"required"`
 	ProcessText          *string       `json:"process_text"`
@@ -123,7 +123,7 @@ type DashboardStatsDTO struct {
 
 type EncyclopediaListItemDTO struct {
 	ID            uint64   `json:"id"`
-	Name          string   `json:"name"`
+	Name          string   `json:"encyclopedia_recipes_name"`
 	CoverImageURL *string  `json:"cover_image_url,omitempty"`
 	Category      *string  `json:"category,omitempty"`
 	Tags          []string `json:"tags,omitempty"`
@@ -132,7 +132,7 @@ type EncyclopediaListItemDTO struct {
 
 type EncyclopediaRecipeDTO struct {
 	ID            uint64        `json:"id"`
-	Name          string        `json:"name"`
+	Name          string        `json:"encyclopedia_recipes_name"`
 	Description   *string       `json:"description,omitempty"`
 	CoverImageURL *string       `json:"cover_image_url,omitempty"`
 	Category      *string       `json:"category,omitempty"`
@@ -199,7 +199,7 @@ type TagDTO struct {
 
 // ExportRecipeDTO 导出菜谱结构
 type ExportRecipeDTO struct {
-	Name                 string        `json:"name"`
+	Name                 string        `json:"recipe_name"`
 	UserRating           *uint8        `json:"user_rating,omitempty"`
 	EncyclopediaRecipeID *uint64       `json:"encyclopedia_recipe_id,omitempty"`
 	Ingredients          []Ingredient  `json:"ingredients"`

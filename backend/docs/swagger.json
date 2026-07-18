@@ -347,7 +347,7 @@
         },
         "/encyclopedia/search": {
             "get": {
-                "description": "搜索百科菜谱库。优先从外部 API（Spoonacular + MealDB）搜索，无结果或禁用时回退本地数据库。支持中英翻译",
+                "description": "搜索百科菜谱库。优先聚合免费中文源 HowToCook、Proj.Kitchen，并辅以 Spoonacular、TheMealDB、Forkify、DummyJSON；结果会缓存到数据库供详情查看。支持中英翻译",
                 "produces": [
                     "application/json"
                 ],

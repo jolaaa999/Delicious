@@ -82,7 +82,7 @@ async function onSelectVersion(ver: VersionListItem) {
 
 async function onCompareEncyclopedia() {
   if (!currentVersion.value || !recipe.value) return
-  await compareEncyclopedia(currentVersion.value, recipe.value.name)
+  await compareEncyclopedia(currentVersion.value, recipe.value.recipe_name)
 }
 
 function openDeleteConfirm() {
@@ -120,7 +120,7 @@ function formatIngredientAmount(ing: { amount?: number; unit?: string }) {
   <div class="detail-page">
     <header class="nav-bar">
       <button class="nav-bar__back" aria-label="返回" @click="goBack">←</button>
-      <span class="nav-bar__title">{{ recipe?.name ?? '菜品详情' }}</span>
+      <span class="nav-bar__title">{{ recipe?.recipe_name ?? '菜品详情' }}</span>
       <button class="nav-bar__edit" @click="goEdit">编辑</button>
     </header>
 
@@ -132,12 +132,12 @@ function formatIngredientAmount(ing: { amount?: number; unit?: string }) {
           <img
             v-if="currentVersion.images?.[0] || recipe.cover_image_url"
             :src="resolveImageUrl(currentVersion.images?.[0] || recipe.cover_image_url || '')"
-            :alt="recipe.name"
+            :alt="recipe.recipe_name"
           />
-          <div v-else class="hero__placeholder">{{ recipe.name.charAt(0) }}</div>
+          <div v-else class="hero__placeholder">{{ recipe.recipe_name.charAt(0) }}</div>
         </div>
         <div class="hero__info">
-          <h1 class="hero__name">{{ recipe.name }}</h1>
+          <h1 class="hero__name">{{ recipe.recipe_name }}</h1>
           <p v-if="recipe.user_rating" class="hero__rating">{{ stars }}</p>
           <p class="hero__version">当前 v{{ currentVersion.version_number }}</p>
           <p v-if="currentVersion.commit_msg" class="hero__commit">{{ currentVersion.commit_msg }}</p>
@@ -214,7 +214,7 @@ function formatIngredientAmount(ing: { amount?: number; unit?: string }) {
     <ConfirmSheet
       :open="deleteOpen"
       title="移入回收站"
-      :message="`「${recipe?.name ?? ''}」将移入回收站，30 天内可恢复。`"
+      :message="`「${recipe?.recipe_name ?? ''}」将移入回收站，30 天内可恢复。`"
       confirm-text="确认删除"
       cancel-text="再想想"
       tone="danger"

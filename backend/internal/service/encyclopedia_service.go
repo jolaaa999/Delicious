@@ -152,7 +152,7 @@ func toListItemDTO(e *model.EncyclopediaRecipe) dto.EncyclopediaListItemDTO {
 	tags := []string(e.Tags)
 	return dto.EncyclopediaListItemDTO{
 		ID:            e.ID,
-		Name:          e.Name,
+		Name: e.Name,
 		CoverImageURL: e.CoverImageURL,
 		Category:      e.Category,
 		Tags:          tags,
@@ -175,7 +175,7 @@ func toEncyclopediaDetailDTO(e *model.EncyclopediaRecipe) dto.EncyclopediaRecipe
 	}
 	return dto.EncyclopediaRecipeDTO{
 		ID:            e.ID,
-		Name:          e.Name,
+		Name: e.Name,
 		Description:   e.Description,
 		CoverImageURL: e.CoverImageURL,
 		Category:      e.Category,

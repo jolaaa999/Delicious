@@ -8,7 +8,7 @@ import type { Ingredient, ProcessStep } from '@/types/recipe'
 
 interface EncyclopediaDetail {
   id: number
-  name: string
+  encyclopedia_recipes_name: string
   description?: string
   category?: string
   tags?: string[]
@@ -64,12 +64,12 @@ async function loadRecipe(lang: 'en' | 'zh', options?: { silent?: boolean }) {
   }
   try {
     const res = await getEncyclopedia(id, { lang })
-    if (!res?.name) {
+    if (!res?.encyclopedia_recipes_name) {
       throw new Error('菜谱内容为空')
     }
     const normalized: EncyclopediaDetail = {
       id: res.id,
-      name: res.name,
+      encyclopedia_recipes_name: res.encyclopedia_recipes_name,
       description: res.description,
       category: res.category,
       tags: res.tags,
@@ -136,7 +136,7 @@ function formatIngredientAmount(ing: { amount?: number; unit?: string }) {
   <div class="detail-page">
     <header class="nav-bar">
       <button class="nav-bar__back" aria-label="返回" @click="goBack">←</button>
-      <span class="nav-bar__title">{{ recipe?.name ?? '百科详情' }}</span>
+      <span class="nav-bar__title">{{ recipe?.encyclopedia_recipes_name ?? '百科详情' }}</span>
       <LangSwitch v-if="recipe" v-model="displayLang" :disabled="translating" />
     </header>
 
@@ -148,7 +148,7 @@ function formatIngredientAmount(ing: { amount?: number; unit?: string }) {
 
       <section class="hero">
         <div class="hero__info">
-          <h1 class="hero__name">{{ recipe.name }}</h1>
+          <h1 class="hero__name">{{ recipe.encyclopedia_recipes_name }}</h1>
           <p v-if="recipe.description" class="hero__desc">{{ recipe.description }}</p>
           <div v-if="recipe.category" class="hero__tag">{{ recipe.category }}</div>
           <div v-if="tags.length" class="hero__tags">

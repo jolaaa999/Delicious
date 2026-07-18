@@ -111,11 +111,11 @@ async function handleImportFile(e: Event) {
     <ul v-else-if="store.items.length" class="recipe-flow">
       <li v-for="item in store.items" :key="item.id" class="recipe-card" @click="goDetail(item.id)">
         <div class="recipe-card__cover">
-          <img v-if="item.cover_image_url" :src="resolveImageUrl(item.cover_image_url)" :alt="item.name" />
-          <div v-else class="recipe-card__placeholder">{{ item.name.charAt(0) }}</div>
+          <img v-if="item.cover_image_url" :src="resolveImageUrl(item.cover_image_url)" :alt="item.recipe_name" />
+          <div v-else class="recipe-card__placeholder">{{ item.recipe_name.charAt(0) }}</div>
         </div>
         <div class="recipe-card__body">
-          <h3 class="recipe-card__name">{{ item.name }}</h3>
+          <h3 class="recipe-card__name">{{ item.recipe_name }}</h3>
           <p v-if="item.user_rating" class="recipe-card__rating">{{ renderStars(item.user_rating) }}</p>
           <p class="recipe-card__meta">v{{ item.current_version_number }}</p>
         </div>

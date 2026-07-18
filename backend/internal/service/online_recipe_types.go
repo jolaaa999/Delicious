@@ -32,7 +32,7 @@ func (h OnlineRecipeHit) toModel() model.EncyclopediaRecipe {
 		steps = model.JSONSlice[model.ProcessStep]{}
 	}
 	return model.EncyclopediaRecipe{
-		Name:           h.Name,
+		Name: h.Name,
 		Description:    h.Description,
 		CoverImageURL:  h.CoverImageURL,
 		Category:       h.Category,

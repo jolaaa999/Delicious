@@ -19,7 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users (deleted_at);
 -- 2. 百科菜谱
 CREATE TABLE IF NOT EXISTS encyclopedia_recipes (
     id              BIGSERIAL PRIMARY KEY,
-    name            VARCHAR(128) NOT NULL,
+    encyclopedia_recipes_name VARCHAR(128) NOT NULL,
     description     TEXT,
     cover_image_url VARCHAR(512),
     category        VARCHAR(64),
@@ -39,7 +39,7 @@ CREATE INDEX IF NOT EXISTS idx_encyclopedia_name_trgm ON encyclopedia_recipes US
 CREATE TABLE IF NOT EXISTS my_recipes (
     id                     BIGSERIAL PRIMARY KEY,
     user_id                BIGINT      NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    name                   VARCHAR(128) NOT NULL,
+    encyclopedia_recipes_name VARCHAR(128) NOT NULL,
     current_version_id     BIGINT,
     user_rating            SMALLINT CHECK (user_rating BETWEEN 1 AND 5),
     cover_image_url        VARCHAR(512),

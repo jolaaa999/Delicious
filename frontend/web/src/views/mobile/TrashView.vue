@@ -71,7 +71,7 @@ function goBack() { router.back() }
     <ul v-else class="recipe-flow">
       <li v-for="item in items" :key="item.id" class="recipe-card">
         <div class="recipe-card__body" style="flex:1;">
-          <h3 class="recipe-card__name">{{ item.name }}</h3>
+          <h3 class="recipe-card__name">{{ item.recipe_name }}</h3>
           <p class="recipe-card__meta">v{{ item.current_version_number }}</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -84,7 +84,7 @@ function goBack() { router.back() }
     <ConfirmSheet
       :open="purgeOpen"
       title="彻底删除"
-      :message="`「${purgeTarget?.name ?? ''}」将被永久删除，此操作不可恢复。`"
+      :message="`「${purgeTarget?.recipe_name ?? ''}」将被永久删除，此操作不可恢复。`"
       confirm-text="彻底删除"
       cancel-text="再想想"
       tone="danger"

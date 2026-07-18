@@ -152,8 +152,8 @@ export function getDemoRecipe(): MyRecipe {
   const version = getDemoVersionDetail(103, 3)
   return {
     id: 1,
-    user_id: 1,
-    name: '红烧肉',
+    user_id: '1',
+    recipe_name: '红烧肉',
     current_version_id: 103,
     user_rating: 4,
     cover_image_url: undefined,

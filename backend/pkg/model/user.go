@@ -9,6 +9,7 @@ import (
 // User 用户表
 type User struct {
 	ID           uint64         `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID       string         `gorm:"size:255;uniqueIndex" json:"user_id"`
 	Username     string         `gorm:"size:64;not null;uniqueIndex:uk_users_username" json:"username"`
 	Email        *string        `gorm:"size:128;uniqueIndex:uk_users_email" json:"email,omitempty"`
 	PasswordHash string         `gorm:"size:255;not null" json:"-"`

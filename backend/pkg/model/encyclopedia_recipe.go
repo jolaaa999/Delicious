@@ -5,7 +5,8 @@ import "time"
 // EncyclopediaRecipe 百科菜谱表
 type EncyclopediaRecipe struct {
 	ID            uint64                   `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name          string                   `gorm:"size:128;not null;index:idx_encyclopedia_name" json:"name"`
+	EncyclopediaRecipesID   *string                  `gorm:"size:128" json:"encyclopedia_recipes_id,omitempty"`
+	Name                    string                   `gorm:"column:encyclopedia_recipes_name;size:128;not null;index:idx_encyclopedia_name" json:"encyclopedia_recipes_name"`
 	Description   *string                  `gorm:"type:text" json:"description,omitempty"`
 	CoverImageURL *string                  `gorm:"size:512" json:"cover_image_url,omitempty"`
 	Category      *string                  `gorm:"size:64;index:idx_encyclopedia_category" json:"category,omitempty"`

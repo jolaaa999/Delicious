@@ -22,7 +22,7 @@ func NewRecipeService(repo *repository.RecipeRepository, ency *repository.Encycl
 func (s *RecipeService) Create(userID uint64, req dto.CreateRecipeRequest) (*dto.MyRecipeDTO, error) {
 	recipe := &model.MyRecipe{
 		UserID:               userID,
-		Name:                 req.Name,
+		Name: req.Name,
 		UserRating:           req.UserRating,
 		EncyclopediaRecipeID: req.EncyclopediaRecipeID,
 	}
@@ -82,7 +82,7 @@ func (s *RecipeService) List(filter repository.ListRecipesFilter) ([]dto.RecipeL
 	for _, item := range items {
 		d := dto.RecipeListItemDTO{
 			ID:            item.ID,
-			Name:          item.Name,
+			Name: item.Name,
 			CoverImageURL: item.CoverImageURL,
 			CreatedAt:     item.CreatedAt,
 			UpdatedAt:     item.UpdatedAt,
@@ -262,7 +262,7 @@ func (s *RecipeService) ListTrash(userID uint64, page, pageSize int) ([]dto.Reci
 	for _, item := range items {
 		d := dto.RecipeListItemDTO{
 			ID:            item.ID,
-			Name:          item.Name,
+			Name: item.Name,
 			CoverImageURL: item.CoverImageURL,
 			CreatedAt:     item.CreatedAt,
 			UpdatedAt:     item.UpdatedAt,
@@ -297,7 +297,7 @@ func (s *RecipeService) Export(userID uint64) ([]dto.ExportRecipeDTO, error) {
 	result := make([]dto.ExportRecipeDTO, 0, len(recipes))
 	for _, r := range recipes {
 		exp := dto.ExportRecipeDTO{
-			Name:                 r.Name,
+			Name: r.Name,
 			UserRating:           r.UserRating,
 			EncyclopediaRecipeID: r.EncyclopediaRecipeID,
 		}
@@ -338,7 +338,7 @@ func (s *RecipeService) Import(userID uint64, recipes []dto.ExportRecipeDTO) (*d
 		} else {
 			recipe := &model.MyRecipe{
 				UserID:               userID,
-				Name:                 exp.Name,
+				Name: exp.Name,
 				UserRating:           exp.UserRating,
 				EncyclopediaRecipeID: exp.EncyclopediaRecipeID,
 			}
@@ -407,7 +407,7 @@ func toEncyclopediaDTO(e *model.EncyclopediaRecipe) dto.EncyclopediaRecipeDTO {
 	}
 	return dto.EncyclopediaRecipeDTO{
 		ID:            e.ID,
-		Name:          e.Name,
+		Name: e.Name,
 		Description:   e.Description,
 		CoverImageURL: e.CoverImageURL,
 		Category:      e.Category,

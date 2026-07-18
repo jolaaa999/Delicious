@@ -45,7 +45,7 @@ function goDetail(row: RecipeListItem) {
 }
 
 async function handleDelete(row: RecipeListItem) {
-  await ElMessageBox.confirm(`确定删除「${row.name}」？`, '确认删除', { type: 'warning' })
+  await ElMessageBox.confirm(`确定删除「${row.recipe_name}」？`, '确认删除', { type: 'warning' })
   await deleteRecipe(row.id)
   ElMessage.success('已删除')
   fetchList()
@@ -91,7 +91,7 @@ function formatDate(iso: string) {
               fit="cover"
               style="width: 48px; height: 48px; border-radius: 6px"
             />
-            <div v-else class="thumb-placeholder">{{ row.name.charAt(0) }}</div>
+            <div v-else class="thumb-placeholder">{{ row.recipe_name.charAt(0) }}</div>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="菜名" min-width="120" />

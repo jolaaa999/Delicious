@@ -26,8 +26,8 @@ export interface RecipeVersion {
 
 export interface MyRecipe {
   id: number
-  user_id: number
-  name: string
+  user_id: string
+  recipe_name: string
   current_version_id: number
   user_rating: number
   cover_image_url?: string
@@ -39,7 +39,7 @@ export interface MyRecipe {
 
 export interface RecipeListItem {
   id: number
-  name: string
+  recipe_name: string
   cover_image_url?: string
   user_rating: number
   current_version_number: number
@@ -64,7 +64,7 @@ export interface TimelineNode {
 
 export interface EncyclopediaListItem {
   id: number
-  name: string
+  encyclopedia_recipes_name: string
   description?: string
   category?: string
   cover_image_url?: string

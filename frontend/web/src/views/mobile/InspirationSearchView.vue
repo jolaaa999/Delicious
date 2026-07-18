@@ -231,12 +231,12 @@ function nameParts(name: string) {
       <ul class="recipe-flow">
         <li v-for="item in items" :key="item.id" class="recipe-card" @click="goDetail(item.id)">
           <div class="recipe-card__cover">
-            <img v-if="item.cover_image_url" :src="resolveImageUrl(item.cover_image_url)" :alt="item.name" />
-            <div v-else class="recipe-card__placeholder">{{ item.name.charAt(0) }}</div>
+            <img v-if="item.cover_image_url" :src="resolveImageUrl(item.cover_image_url)" :alt="item.encyclopedia_recipes_name" />
+            <div v-else class="recipe-card__placeholder">{{ item.encyclopedia_recipes_name.charAt(0) }}</div>
           </div>
           <div class="recipe-card__body">
             <h3 class="recipe-card__name">
-              <template v-for="(part, idx) in nameParts(item.name)" :key="idx">
+              <template v-for="(part, idx) in nameParts(item.encyclopedia_recipes_name)" :key="idx">
                 <mark v-if="part.hit" class="name-hit">{{ part.text }}</mark>
                 <template v-else>{{ part.text }}</template>
               </template>

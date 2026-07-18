@@ -58,7 +58,7 @@ function formatDate(iso: string) {
   <div v-loading="loading">
     <el-page-header @back="router.push('/recipes')">
       <template #content>
-        <span class="detail-title">{{ recipe?.name ?? '菜谱详情' }}</span>
+        <span class="detail-title">{{ recipe?.recipe_name ?? '菜谱详情' }}</span>
       </template>
     </el-page-header>
 

@@ -99,7 +99,7 @@ func (r *EncyclopediaRepository) UpsertExternal(recipe model.EncyclopediaRecipe)
 		return nil, err
 	}
 	updates := map[string]interface{}{
-		"name":            recipe.Name,
+		"encyclopedia_recipes_name": recipe.Name,
 		"description":     recipe.Description,
 		"cover_image_url": recipe.CoverImageURL,
 		"category":        recipe.Category,

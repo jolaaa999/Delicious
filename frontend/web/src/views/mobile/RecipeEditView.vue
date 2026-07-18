@@ -41,7 +41,7 @@ async function prefillFromEncyclopedia(id: number) {
   loading.value = true
   try {
     const recipe = await getEncyclopedia(id)
-    name.value = recipe.name
+    name.value = recipe.encyclopedia_recipes_name
     ingredients.value = recipe.ingredients.map((i) => ({ ...i }))
     processSteps.value = recipe.process_steps.map((s) => ({ ...s }))
     commitMsg.value = '从百科导入'
@@ -57,7 +57,7 @@ async function loadRecipe() {
   try {
     const res = await getRecipe(recipeId.value)
     const r = res.recipe
-    name.value = r.name
+    name.value = r.recipe_name
     userRating.value = r.user_rating || 0
     encyclopediaRecipeId.value = r.encyclopedia_recipe_id
     const ver = r.current_version
