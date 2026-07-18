@@ -40,12 +40,10 @@ onMounted(async () => {
 async function prefillFromEncyclopedia(id: number) {
   loading.value = true
   try {
-    const res = (await getEncyclopedia(id)) as {
-      recipe: { name: string; ingredients: Ingredient[]; process_steps: ProcessStep[] }
-    }
-    name.value = res.recipe.name
-    ingredients.value = res.recipe.ingredients.map((i) => ({ ...i }))
-    processSteps.value = res.recipe.process_steps.map((s) => ({ ...s }))
+    const recipe = await getEncyclopedia(id)
+    name.value = recipe.name
+    ingredients.value = recipe.ingredients.map((i) => ({ ...i }))
+    processSteps.value = recipe.process_steps.map((s) => ({ ...s }))
     commitMsg.value = '从百科导入'
   } catch {
     errorMsg.value = '加载百科数据失败'

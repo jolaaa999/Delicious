@@ -62,6 +62,14 @@ export interface TimelineNode {
   is_current: boolean
 }
 
+export interface EncyclopediaListItem {
+  id: number
+  name: string
+  description?: string
+  category?: string
+  cover_image_url?: string
+}
+
 export interface DashboardStats {
   total_recipes: number
   average_rating: number

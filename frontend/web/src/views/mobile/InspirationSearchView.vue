@@ -23,13 +23,18 @@ async function handleSearch() {
     const res = await searchEncyclopedia({
       keyword: keyword.value.trim(),
       page: 1,
-      page_size: 20,
+      page_size: 12,
       lang: displayLang.value,
     })
     items.value = res.items ?? []
   } catch (e: unknown) {
     items.value = []
-    searchError.value = (e as { message?: string })?.message || '搜索失败，请稍后重试'
+    const msg = (e as { message?: string })?.message || ''
+    if (msg.includes('timeout')) {
+      searchError.value = '搜索超时，联网翻译较慢，请稍后重试'
+    } else {
+      searchError.value = msg || '搜索失败，请稍后重试'
+    }
   } finally {
     loading.value = false
   }

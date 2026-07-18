@@ -203,6 +203,70 @@ func (h *RecipeHandler) CompareEncyclopedia(c *gin.Context) {
 	})
 }
 
+// ── 回收站 ──
+
+func (h *RecipeHandler) ListTrash(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	items, pageInfo, err := h.svc.ListTrash(middleware.GetUserID(c), page, pageSize)
+	if err != nil {
+		middleware.InternalError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": items, "page_info": pageInfo})
+}
+
+func (h *RecipeHandler) Restore(c *gin.Context) {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return
+	}
+	if err := h.svc.Restore(id, middleware.GetUserID(c)); err != nil {
+		handleRepoErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "已恢复"})
+}
+
+func (h *RecipeHandler) PermanentDelete(c *gin.Context) {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return
+	}
+	if err := h.svc.PermanentDelete(id, middleware.GetUserID(c)); err != nil {
+		handleRepoErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "已彻底删除"})
+}
+
+// ── 导出/导入 ──
+
+func (h *RecipeHandler) Export(c *gin.Context) {
+	recipes, err := h.svc.Export(middleware.GetUserID(c))
+	if err != nil {
+		middleware.InternalError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"recipes": recipes})
+}
+
+func (h *RecipeHandler) Import(c *gin.Context) {
+	var req struct {
+		Recipes []dto.ExportRecipeDTO `json:"recipes" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.BadRequest(c, "请提供 recipes 数组")
+		return
+	}
+	result, err := h.svc.Import(middleware.GetUserID(c), req.Recipes)
+	if err != nil {
+		middleware.InternalError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"result": result})
+}
+
 func parseUintParam(c *gin.Context, name string) (uint64, error) {
 	v, err := strconv.ParseUint(c.Param(name), 10, 64)
 	if err != nil || v == 0 {

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/delicious/delicious/pkg/cache"
 )
 
 // 常见中文菜名 → 英文检索词（公开菜谱 API 以英文为主）
@@ -32,6 +34,8 @@ var chineseDishMap = map[string]string{
 	"馄饨":   "wonton soup",
 	"面条":   "noodles",
 	"火锅":   "hot pot",
+	"牛排":   "steak",
+	"牛肉":   "beef",
 }
 
 func expandSearchKeywords(ctx context.Context, client *http.Client, keyword string) []string {
@@ -68,6 +72,36 @@ func translateZhToEn(ctx context.Context, client *http.Client, text string) (str
 
 func translateEnToZh(ctx context.Context, client *http.Client, text string) (string, error) {
 	return translateWithPair(ctx, client, text, "en|zh-CN")
+}
+
+// ── 带缓存的翻译 ──
+
+// CachedTranslate 带缓存的翻译，key 格式: "langPair:text"
+func CachedTranslate(ctx context.Context, c *cache.MemoryCache, client *http.Client, text, langPair string) (string, error) {
+	key := langPair + ":" + text
+	if val, ok := c.Get(key); ok {
+		return val, nil
+	}
+	val, err := translateWithPair(ctx, client, text, langPair)
+	if err != nil {
+		return "", err
+	}
+	c.Set(key, val)
+	return val, nil
+}
+
+// CachedTranslateLong 带缓存的分段翻译
+func CachedTranslateLong(ctx context.Context, c *cache.MemoryCache, client *http.Client, text, langPair string) (string, error) {
+	key := "long:" + langPair + ":" + text
+	if val, ok := c.Get(key); ok {
+		return val, nil
+	}
+	val, err := translateLongText(ctx, client, text, langPair)
+	if err != nil {
+		return text, err
+	}
+	c.Set(key, val)
+	return val, nil
 }
 
 func translateWithPair(ctx context.Context, client *http.Client, text, langPair string) (string, error) {

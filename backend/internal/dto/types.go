@@ -184,3 +184,36 @@ func ToRecipeDTO(r *model.MyRecipe, ver *model.RecipeVersion) MyRecipeDTO {
 	}
 	return dto
 }
+
+// CategoryDTO 分类字典
+type CategoryDTO struct {
+	ID   uint64 `json:"id"`
+	Name string `json:"name"`
+}
+
+// TagDTO 标签字典
+type TagDTO struct {
+	ID   uint64 `json:"id"`
+	Name string `json:"name"`
+}
+
+// ExportRecipeDTO 导出菜谱结构
+type ExportRecipeDTO struct {
+	Name                 string        `json:"name"`
+	UserRating           *uint8        `json:"user_rating,omitempty"`
+	EncyclopediaRecipeID *uint64       `json:"encyclopedia_recipe_id,omitempty"`
+	Ingredients          []Ingredient  `json:"ingredients"`
+	ProcessSteps         []ProcessStep `json:"process_steps"`
+	ProcessText          *string       `json:"process_text,omitempty"`
+	Images               []string      `json:"images,omitempty"`
+	CommitMsg            string        `json:"commit_msg,omitempty"`
+}
+
+// ImportResultDTO 导入结果
+type ImportResultDTO struct {
+	Total   int      `json:"total"`
+	Created int      `json:"created"`
+	Updated int      `json:"updated"`
+	Skipped int      `json:"skipped"`
+	Errors  []string `json:"errors,omitempty"`
+}

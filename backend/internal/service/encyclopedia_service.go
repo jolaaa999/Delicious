@@ -9,6 +9,7 @@ import (
 	"github.com/delicious/delicious/internal/config"
 	"github.com/delicious/delicious/internal/dto"
 	"github.com/delicious/delicious/internal/repository"
+	"github.com/delicious/delicious/pkg/cache"
 	"github.com/delicious/delicious/pkg/model"
 )
 
@@ -16,6 +17,7 @@ type EncyclopediaService struct {
 	repo       *repository.EncyclopediaRepository
 	online     *OnlineRecipeSearch
 	httpClient *http.Client
+	transCache *cache.MemoryCache
 }
 
 func NewEncyclopediaService(repo *repository.EncyclopediaRepository, cfg config.Config) *EncyclopediaService {
@@ -23,13 +25,17 @@ func NewEncyclopediaService(repo *repository.EncyclopediaRepository, cfg config.
 		repo:       repo,
 		online:     NewOnlineRecipeSearch(cfg),
 		httpClient: &http.Client{Timeout: 15 * time.Second},
+		transCache: cache.New(1 * time.Hour),
 	}
 }
 
 func (s *EncyclopediaService) Search(keyword, category, lang string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+
 	if keyword != "" && category == "" && s.online.Enabled() {
-		if items, pageInfo, err := s.searchOnline(keyword, page, pageSize); err == nil && len(items) > 0 {
-			return s.applyListLang(context.Background(), items, lang), pageInfo, nil
+		if items, pageInfo, err := s.searchOnline(ctx, keyword, page, pageSize); err == nil && len(items) > 0 {
+			return s.applyListLang(ctx, items, lang), pageInfo, nil
 		}
 	}
 
@@ -43,11 +49,11 @@ func (s *EncyclopediaService) Search(keyword, category, lang string, page, pageS
 		return nil, dto.PageInfo{}, err
 	}
 	list := toListDTOs(items, page, pageSize, total)
-	return s.applyListLang(context.Background(), list, lang), pageInfoFrom(page, pageSize, total), nil
+	return s.applyListLang(ctx, list, lang), pageInfoFrom(page, pageSize, total), nil
 }
 
-func (s *EncyclopediaService) searchOnline(keyword string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
-	hits, total, err := s.online.Search(context.Background(), keyword, page, pageSize)
+func (s *EncyclopediaService) searchOnline(ctx context.Context, keyword string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
+	hits, total, err := s.online.Search(ctx, keyword, page, pageSize)
 	if err != nil || len(hits) == 0 {
 		return nil, dto.PageInfo{}, err
 	}
@@ -63,19 +69,22 @@ func (s *EncyclopediaService) searchOnline(keyword string, page, pageSize int) (
 }
 
 func (s *EncyclopediaService) Get(id uint64, lang string) (*dto.EncyclopediaRecipeDTO, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
 	e, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if s.shouldRefreshOnline(e) {
-		if hit, fetchErr := s.online.Fetch(context.Background(), *e.ExternalSource, *e.ExternalID); fetchErr == nil {
+		if hit, fetchErr := s.online.Fetch(ctx, *e.ExternalSource, *e.ExternalID); fetchErr == nil {
 			if updated, upsertErr := s.repo.UpsertExternal(hit.toModel()); upsertErr == nil {
 				e = updated
 			}
 		}
 	}
 	out := toEncyclopediaDetailDTO(e)
-	return s.applyRecipeLang(context.Background(), &out, lang), nil
+	return s.applyRecipeLang(ctx, &out, lang), nil
 }
 
 func (s *EncyclopediaService) shouldRefreshOnline(e *model.EncyclopediaRecipe) bool {
@@ -110,6 +119,9 @@ func toListItemDTO(e *model.EncyclopediaRecipe) dto.EncyclopediaListItemDTO {
 }
 
 func pageInfoFrom(page, pageSize int, total int64) dto.PageInfo {
+	if pageSize <= 0 {
+		pageSize = 20
+	}
 	pages := int(math.Ceil(float64(total) / float64(pageSize)))
 	return dto.PageInfo{Page: page, PageSize: pageSize, Total: total, TotalPages: pages}
 }

@@ -21,12 +21,31 @@ var AllRoutes = []Route{
 	{http.MethodGet, "/encyclopedia/:id", "delicious.v1.EncyclopediaService", "GetRecipe"},
 	{http.MethodGet, "/encyclopedia/category/:category", "delicious.v1.EncyclopediaService", "ListByCategory"},
 
+	// Categories
+	{http.MethodGet, "/categories", "delicious.v1.CategoryService", "ListCategories"},
+	{http.MethodPost, "/categories", "delicious.v1.CategoryService", "CreateCategory"},
+	{http.MethodPut, "/categories/:id", "delicious.v1.CategoryService", "UpdateCategory"},
+	{http.MethodDelete, "/categories/:id", "delicious.v1.CategoryService", "DeleteCategory"},
+
+	// Tags
+	{http.MethodGet, "/tags", "delicious.v1.TagService", "ListTags"},
+	{http.MethodPost, "/tags", "delicious.v1.TagService", "CreateTag"},
+	{http.MethodDelete, "/tags/:id", "delicious.v1.TagService", "DeleteTag"},
+	{http.MethodGet, "/encyclopedia/:id/tags", "delicious.v1.TagService", "ListRecipeTags"},
+	{http.MethodPost, "/encyclopedia/:id/tags", "delicious.v1.TagService", "AddRecipeTag"},
+	{http.MethodDelete, "/encyclopedia/:id/tags/:tag_id", "delicious.v1.TagService", "RemoveRecipeTag"},
+
 	// Recipe CRUD
 	{http.MethodPost, "/recipes", "delicious.v1.RecipeService", "CreateRecipe"},
 	{http.MethodGet, "/recipes", "delicious.v1.RecipeService", "ListRecipes"},
+	{http.MethodGet, "/recipes/trash", "delicious.v1.RecipeService", "ListTrash"},
+	{http.MethodGet, "/recipes/export", "delicious.v1.RecipeService", "ExportRecipes"},
+	{http.MethodPost, "/recipes/import", "delicious.v1.RecipeService", "ImportRecipes"},
 	{http.MethodGet, "/recipes/:id", "delicious.v1.RecipeService", "GetRecipe"},
 	{http.MethodPut, "/recipes/:id", "delicious.v1.RecipeService", "UpdateRecipe"},
 	{http.MethodDelete, "/recipes/:id", "delicious.v1.RecipeService", "DeleteRecipe"},
+	{http.MethodPost, "/recipes/:id/restore", "delicious.v1.RecipeService", "RestoreRecipe"},
+	{http.MethodDelete, "/recipes/:id/permanent", "delicious.v1.RecipeService", "PermanentDelete"},
 
 	// Version & Diff
 	{http.MethodGet, "/recipes/:id/versions", "delicious.v1.RecipeService", "ListVersions"},

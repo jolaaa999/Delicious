@@ -11,6 +11,8 @@ type Handlers struct {
 	Encyclopedia *EncyclopediaHandler
 	Dashboard    *DashboardHandler
 	Upload       *UploadHandler
+	Category     *CategoryHandler
+	Tag          *TagHandler
 }
 
 func Register(r *gin.Engine, cfg config.Config, h Handlers) {
@@ -37,19 +39,42 @@ func Register(r *gin.Engine, cfg config.Config, h Handlers) {
 	v1.GET("/encyclopedia/category/:category", h.Encyclopedia.ListByCategory)
 	v1.GET("/encyclopedia/:id", h.Encyclopedia.Get)
 
+	// Categories
+	v1.GET("/categories", h.Category.List)
+	v1.POST("/categories", h.Category.Create)
+	v1.PUT("/categories/:id", h.Category.Update)
+	v1.DELETE("/categories/:id", h.Category.Delete)
+
+	// Tags
+	v1.GET("/tags", h.Tag.List)
+	v1.POST("/tags", h.Tag.Create)
+	v1.DELETE("/tags/:id", h.Tag.Delete)
+	v1.GET("/encyclopedia/:id/tags", h.Tag.ListByRecipe)
+	v1.POST("/encyclopedia/:id/tags", h.Tag.AddToRecipe)
+	v1.DELETE("/encyclopedia/:id/tags/:tag_id", h.Tag.RemoveFromRecipe)
+
 	// Recipes
 	v1.POST("/recipes", h.Recipe.Create)
 	v1.GET("/recipes", h.Recipe.List)
+	v1.GET("/recipes/trash", h.Recipe.ListTrash)
+	v1.GET("/recipes/export", h.Recipe.Export)
+	v1.POST("/recipes/import", h.Recipe.Import)
 	v1.GET("/recipes/:id", h.Recipe.Get)
 	v1.PUT("/recipes/:id", h.Recipe.Update)
 	v1.DELETE("/recipes/:id", h.Recipe.Delete)
+	v1.POST("/recipes/:id/restore", h.Recipe.Restore)
+	v1.DELETE("/recipes/:id/permanent", h.Recipe.PermanentDelete)
 	v1.GET("/recipes/:id/versions", h.Recipe.ListVersions)
 	v1.GET("/recipes/:id/versions/:version_id", h.Recipe.GetVersion)
 	v1.GET("/recipes/:id/diff", h.Recipe.CompareVersions)
 	v1.GET("/recipes/:id/diff/encyclopedia", h.Recipe.CompareEncyclopedia)
 	v1.GET("/recipes/:id/compare-encyclopedia", h.Recipe.CompareEncyclopedia) // 兼容旧版前端路径
 
-	// Dashboard
+	// Admin — 图片清理
+	v1.POST("/admin/cleanup-images", h.Upload.CleanupScan)
+	v1.POST("/admin/cleanup-images/execute", h.Upload.CleanupExecute)
+
+		// Dashboard
 	v1.GET("/dashboard/stats", h.Dashboard.Stats)
 	v1.GET("/dashboard/recipes/:id/timeline", h.Dashboard.Timeline)
 }

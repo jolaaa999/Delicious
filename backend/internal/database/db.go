@@ -30,12 +30,17 @@ func AutoMigrate(db *gorm.DB) error {
 	// 先建被引用表，再建含外键的表；my_recipes ↔ recipe_versions 的 current_version_id 不设 DB 外键，避免循环依赖。
 	if err := db.AutoMigrate(
 		&model.User{},
+		&model.Category{},
+		&model.Tag{},
 		&model.EncyclopediaRecipe{},
 		&model.MyRecipe{},
 	); err != nil {
 		return err
 	}
-	return db.AutoMigrate(&model.RecipeVersion{})
+	if err := db.AutoMigrate(&model.RecipeVersion{}); err != nil {
+		return err
+	}
+	return db.AutoMigrate(&model.EncyclopediaRecipeTag{})
 }
 
 func Seed(db *gorm.DB, defaultUID uint64) error {
@@ -123,6 +128,36 @@ func Seed(db *gorm.DB, defaultUID uint64) error {
 		}
 		log.Println("seed: encyclopedia recipes created")
 	}
+
+	// Seed 分类字典
+	db.Model(&model.Category{}).Count(&count)
+	if count == 0 {
+		categories := []model.Category{
+			{Name: "家常菜"}, {Name: "川菜"}, {Name: "粤菜"}, {Name: "鲁菜"},
+			{Name: "苏菜"}, {Name: "湘菜"}, {Name: "西餐"}, {Name: "日料"},
+			{Name: "韩餐"}, {Name: "烘焙"}, {Name: "甜点"}, {Name: "快手菜"},
+			{Name: "硬菜"}, {Name: "汤羹"}, {Name: "凉菜"},
+		}
+		if err := db.Create(&categories).Error; err != nil {
+			return err
+		}
+		log.Println("seed: categories created")
+	}
+
+	// Seed 标签字典
+	db.Model(&model.Tag{}).Count(&count)
+	if count == 0 {
+		tags := []model.Tag{
+			{Name: "快手菜"}, {Name: "下饭菜"}, {Name: "硬菜"}, {Name: "宴客菜"},
+			{Name: "清淡"}, {Name: "高蛋白"}, {Name: "低脂"}, {Name: "素食"},
+			{Name: "养生"}, {Name: "早餐"}, {Name: "午餐"}, {Name: "晚餐"},
+		}
+		if err := db.Create(&tags).Error; err != nil {
+			return err
+		}
+		log.Println("seed: tags created")
+	}
+
 	return nil
 }
 

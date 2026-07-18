@@ -4,16 +4,46 @@ import (
 	"net/http"
 
 	"github.com/delicious/delicious/internal/middleware"
+	"github.com/delicious/delicious/internal/repository"
 	"github.com/delicious/delicious/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type UploadHandler struct {
-	svc *service.UploadService
+	svc        *service.UploadService
+	recipeRepo *repository.RecipeRepository
 }
 
-func NewUploadHandler(svc *service.UploadService) *UploadHandler {
-	return &UploadHandler{svc: svc}
+func NewUploadHandler(svc *service.UploadService, recipeRepo *repository.RecipeRepository) *UploadHandler {
+	return &UploadHandler{svc: svc, recipeRepo: recipeRepo}
+}
+
+func (h *UploadHandler) CleanupScan(c *gin.Context) {
+	refs, err := h.recipeRepo.AllReferencedImagePaths(middleware.GetUserID(c))
+	if err != nil {
+		middleware.InternalError(c, err)
+		return
+	}
+	result, err := h.svc.ScanOrphans(refs)
+	if err != nil {
+		middleware.BadRequest(c, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"result": result})
+}
+
+func (h *UploadHandler) CleanupExecute(c *gin.Context) {
+	refs, err := h.recipeRepo.AllReferencedImagePaths(middleware.GetUserID(c))
+	if err != nil {
+		middleware.InternalError(c, err)
+		return
+	}
+	result, err := h.svc.DeleteOrphans(refs)
+	if err != nil {
+		middleware.BadRequest(c, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"result": result})
 }
 
 func (h *UploadHandler) Upload(c *gin.Context) {

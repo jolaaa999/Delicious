@@ -49,17 +49,23 @@ func initApp() {
 
 		recipeRepo := repository.NewRecipeRepository(db)
 		encyRepo := repository.NewEncyclopediaRepository(db)
+		categoryRepo := repository.NewCategoryRepository(db)
+		tagRepo := repository.NewTagRepository(db)
 
 		recipeSvc := service.NewRecipeService(recipeRepo, encyRepo)
 		encySvc := service.NewEncyclopediaService(encyRepo, cfg)
 		dashSvc := service.NewDashboardService(recipeRepo)
+		categorySvc := service.NewCategoryService(categoryRepo)
+		tagSvc := service.NewTagService(tagRepo)
 
 		r := gin.Default()
 		handler.Register(r, cfg, handler.Handlers{
 			Recipe:       handler.NewRecipeHandler(recipeSvc),
 			Encyclopedia: handler.NewEncyclopediaHandler(encySvc),
 			Dashboard:    handler.NewDashboardHandler(recipeSvc, dashSvc),
-			Upload:       handler.NewUploadHandler(uploadSvc),
+			Upload:       handler.NewUploadHandler(uploadSvc, recipeRepo),
+			Category:     handler.NewCategoryHandler(categorySvc),
+			Tag:          handler.NewTagHandler(tagSvc),
 		})
 		engine = r
 	})

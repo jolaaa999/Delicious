@@ -185,3 +185,75 @@ func detectMIME(header []byte, filename string) string {
 	}
 	return "application/octet-stream"
 }
+
+// ── 孤立图片清理 ──
+
+type CleanupResult struct {
+	TotalFiles  int      `json:"total_files"`
+	OrphanFiles int      `json:"orphan_files"`
+	FreedBytes  int64    `json:"freed_bytes"`
+	Errors      []string `json:"errors,omitempty"`
+}
+
+// ScanOrphans 扫描上传目录，找出未被数据库引用的孤立文件
+func (s *UploadService) ScanOrphans(referencedURLs map[string]bool) (*CleanupResult, error) {
+	if s.cfg.UseBlob {
+		return nil, fmt.Errorf("Blob 存储模式下不支持此功能")
+	}
+	if s.cfg.UploadDir == "" {
+		return nil, fmt.Errorf("上传目录未配置")
+	}
+	result := &CleanupResult{}
+	_ = filepath.Walk(s.cfg.UploadDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		result.TotalFiles++
+		rel := "/uploads/" + strings.TrimLeft(filepath.ToSlash(strings.TrimPrefix(path, strings.TrimRight(s.cfg.UploadDir, "/\\"))), "/")
+		rel = strings.ReplaceAll(rel, "\\", "/")
+		if !referencedURLs[rel] && !containsPath(referencedURLs, rel) {
+			result.OrphanFiles++
+			result.FreedBytes += info.Size()
+		}
+		return nil
+	})
+	return result, nil
+}
+
+// DeleteOrphans 删除孤儿文件
+func (s *UploadService) DeleteOrphans(referencedURLs map[string]bool) (*CleanupResult, error) {
+	if s.cfg.UseBlob {
+		return nil, fmt.Errorf("Blob 存储模式下不支持此功能")
+	}
+	if s.cfg.UploadDir == "" {
+		return nil, fmt.Errorf("上传目录未配置")
+	}
+	result := &CleanupResult{}
+	_ = filepath.Walk(s.cfg.UploadDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		result.TotalFiles++
+		rel := "/uploads/" + strings.TrimLeft(filepath.ToSlash(strings.TrimPrefix(path, strings.TrimRight(s.cfg.UploadDir, "/\\"))), "/")
+		rel = strings.ReplaceAll(rel, "\\", "/")
+		if !referencedURLs[rel] && !containsPath(referencedURLs, rel) {
+			if rmErr := os.Remove(path); rmErr != nil {
+				result.Errors = append(result.Errors, path+": "+rmErr.Error())
+				return nil
+			}
+			result.OrphanFiles++
+			result.FreedBytes += info.Size()
+		}
+		return nil
+	})
+	return result, nil
+}
+
+func containsPath(refs map[string]bool, p string) bool {
+	for u := range refs {
+		if strings.HasSuffix(u, p) || strings.HasSuffix(p, u) {
+			return true
+		}
+	}
+	return false
+}

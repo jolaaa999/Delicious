@@ -66,6 +66,18 @@ func (s *RecipeService) List(filter repository.ListRecipesFilter) ([]dto.RecipeL
 		return nil, dto.PageInfo{}, err
 	}
 
+	// 批量获取版本号，避免 N+1 查询
+	var versionIDs []uint64
+	for _, item := range items {
+		if item.CurrentVersionID != nil {
+			versionIDs = append(versionIDs, *item.CurrentVersionID)
+		}
+	}
+	versionMap, err := s.repo.GetVersionsByIDs(versionIDs)
+	if err != nil {
+		return nil, dto.PageInfo{}, err
+	}
+
 	result := make([]dto.RecipeListItemDTO, 0, len(items))
 	for _, item := range items {
 		d := dto.RecipeListItemDTO{
@@ -79,14 +91,18 @@ func (s *RecipeService) List(filter repository.ListRecipesFilter) ([]dto.RecipeL
 			d.UserRating = *item.UserRating
 		}
 		if item.CurrentVersionID != nil {
-			if ver, err := s.repo.GetVersion(*item.CurrentVersionID); err == nil {
+			if ver, ok := versionMap[*item.CurrentVersionID]; ok {
 				d.CurrentVersionNumber = ver.VersionNumber
 			}
 		}
 		result = append(result, d)
 	}
 
-	pages := int(math.Ceil(float64(total) / float64(filter.PageSize)))
+	pageSize := filter.PageSize
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	pages := int(math.Ceil(float64(total) / float64(pageSize)))
 	return result, dto.PageInfo{
 		Page:       filter.Page,
 		PageSize:   filter.PageSize,
@@ -233,6 +249,121 @@ func (s *RecipeService) Timeline(recipeID, userID uint64) (*dto.MyRecipeDTO, []d
 	}
 	out := dto.ToRecipeDTO(recipe, ver)
 	return &out, nodes, nil
+}
+
+// ── 回收站 ──
+
+func (s *RecipeService) ListTrash(userID uint64, page, pageSize int) ([]dto.RecipeListItemDTO, dto.PageInfo, error) {
+	items, total, err := s.repo.ListDeleted(userID, page, pageSize)
+	if err != nil {
+		return nil, dto.PageInfo{}, err
+	}
+	result := make([]dto.RecipeListItemDTO, 0, len(items))
+	for _, item := range items {
+		d := dto.RecipeListItemDTO{
+			ID:            item.ID,
+			Name:          item.Name,
+			CoverImageURL: item.CoverImageURL,
+			CreatedAt:     item.CreatedAt,
+			UpdatedAt:     item.UpdatedAt,
+		}
+		if item.UserRating != nil {
+			d.UserRating = *item.UserRating
+		}
+		result = append(result, d)
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	pages := int(math.Ceil(float64(total) / float64(pageSize)))
+	return result, dto.PageInfo{Page: page, PageSize: pageSize, Total: total, TotalPages: pages}, nil
+}
+
+func (s *RecipeService) Restore(id, userID uint64) error {
+	return s.repo.Restore(id, userID)
+}
+
+func (s *RecipeService) PermanentDelete(id, userID uint64) error {
+	return s.repo.PermanentDelete(id, userID)
+}
+
+// ── 导出/导入 ──
+
+func (s *RecipeService) Export(userID uint64) ([]dto.ExportRecipeDTO, error) {
+	recipes, err := s.repo.GetAllWithCurrentVersion(userID)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]dto.ExportRecipeDTO, 0, len(recipes))
+	for _, r := range recipes {
+		exp := dto.ExportRecipeDTO{
+			Name:                 r.Name,
+			UserRating:           r.UserRating,
+			EncyclopediaRecipeID: r.EncyclopediaRecipeID,
+		}
+		if r.CurrentVersion != nil {
+			exp.Ingredients = []dto.Ingredient(r.CurrentVersion.Ingredients)
+			exp.ProcessSteps = []dto.ProcessStep(r.CurrentVersion.ProcessSteps)
+			exp.ProcessText = r.CurrentVersion.ProcessText
+			exp.Images = []string(r.CurrentVersion.Images)
+			exp.CommitMsg = r.CurrentVersion.CommitMsg
+		}
+		result = append(result, exp)
+	}
+	return result, nil
+}
+
+func (s *RecipeService) Import(userID uint64, recipes []dto.ExportRecipeDTO) (*dto.ImportResultDTO, error) {
+	res := &dto.ImportResultDTO{Total: len(recipes)}
+	for _, exp := range recipes {
+		existing, err := s.repo.ExistsByName(userID, exp.Name)
+		if err != nil {
+			res.Errors = append(res.Errors, exp.Name+": "+err.Error())
+			continue
+		}
+		if existing != nil {
+			// 已存在则添加新版本
+			version := &model.RecipeVersion{
+				Ingredients:  model.JSONSlice[model.Ingredient](exp.Ingredients),
+				ProcessSteps: model.JSONSlice[model.ProcessStep](exp.ProcessSteps),
+				ProcessText:  exp.ProcessText,
+				Images:       model.StringSlice(exp.Images),
+				CommitMsg:    impMsg(exp.CommitMsg),
+			}
+			if err := s.repo.AddVersion(existing, version); err != nil {
+				res.Errors = append(res.Errors, exp.Name+": "+err.Error())
+				continue
+			}
+			res.Updated++
+		} else {
+			recipe := &model.MyRecipe{
+				UserID:               userID,
+				Name:                 exp.Name,
+				UserRating:           exp.UserRating,
+				EncyclopediaRecipeID: exp.EncyclopediaRecipeID,
+			}
+			version := &model.RecipeVersion{
+				Ingredients:  model.JSONSlice[model.Ingredient](exp.Ingredients),
+				ProcessSteps: model.JSONSlice[model.ProcessStep](exp.ProcessSteps),
+				ProcessText:  exp.ProcessText,
+				Images:       model.StringSlice(exp.Images),
+				CommitMsg:    impMsg(exp.CommitMsg),
+			}
+			if err := s.repo.CreateWithVersion(recipe, version); err != nil {
+				res.Errors = append(res.Errors, exp.Name+": "+err.Error())
+				continue
+			}
+			res.Created++
+		}
+	}
+	return res, nil
+}
+
+func impMsg(msg string) string {
+	if msg == "" {
+		return "导入"
+	}
+	return msg
 }
 
 func toDiffDTO(r diff.VersionDiffResult) dto.VersionDiffResultDTO {
