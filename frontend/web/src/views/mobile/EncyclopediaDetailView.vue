@@ -116,6 +116,15 @@ function goBack() {
 function addToKitchen() {
   router.push({ path: '/m/kitchen/new', query: { encyclopedia_id: String(id) } })
 }
+
+function formatIngredientAmount(ing: { amount?: number; unit?: string }) {
+  const amount = Number(ing.amount)
+  const unit = (ing.unit || '').trim()
+  if (!amount || amount === 0) {
+    return unit === '适量' ? '适量' : (unit && unit !== '份' ? unit : '适量')
+  }
+  return `${amount}${unit}`
+}
 </script>
 
 <template>
@@ -153,7 +162,7 @@ function addToKitchen() {
         <ul class="ingredient-list">
           <li v-for="(ing, i) in recipe.ingredients" :key="i" class="ingredient-item">
             <span>{{ ing.name }}</span>
-            <span class="amount">{{ ing.amount }}{{ ing.unit }}</span>
+            <span class="amount">{{ formatIngredientAmount(ing) }}</span>
           </li>
         </ul>
 

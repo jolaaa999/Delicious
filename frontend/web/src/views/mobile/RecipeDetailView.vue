@@ -105,6 +105,15 @@ async function confirmDelete() {
     deleting.value = false
   }
 }
+
+function formatIngredientAmount(ing: { amount?: number; unit?: string }) {
+  const amount = Number(ing.amount)
+  const unit = (ing.unit || '').trim()
+  if (!amount || amount === 0) {
+    return unit === '适量' ? '适量' : (unit && unit !== '份' ? unit : '适量')
+  }
+  return `${amount}${unit}`
+}
 </script>
 
 <template>
@@ -168,7 +177,7 @@ async function confirmDelete() {
         <ul class="ingredient-list">
           <li v-for="(ing, i) in currentVersion.ingredients" :key="i" class="ingredient-item">
             <span class="ingredient-item__name">{{ ing.name }}</span>
-            <span class="ingredient-item__amount">{{ ing.amount }}{{ ing.unit }}</span>
+            <span class="ingredient-item__amount">{{ formatIngredientAmount(ing) }}</span>
           </li>
         </ul>
 

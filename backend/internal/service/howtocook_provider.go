@@ -183,7 +183,7 @@ func (d howToCookDetail) toHit() OnlineRecipeHit {
 		if name == "" {
 			continue
 		}
-		ings = append(ings, model.Ingredient{Name: name, Amount: 0, Unit: "份"})
+		ings = append(ings, model.Ingredient{Name: name, Amount: 0, Unit: "适量"})
 	}
 	steps := make([]model.ProcessStep, 0, len(d.Steps))
 	for i, text := range d.Steps {
