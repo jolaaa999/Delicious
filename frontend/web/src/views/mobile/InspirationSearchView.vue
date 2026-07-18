@@ -111,6 +111,8 @@ async function handleSearch() {
     const msg = (e as { message?: string })?.message || ''
     if (msg.includes('timeout')) {
       searchError.value = '搜索超时，联网翻译较慢，请稍后重试'
+    } else if (/402|429|daily points limit|quota/i.test(msg)) {
+      searchError.value = '部分菜谱源今日额度已用尽，请换个关键词或稍后再试'
     } else {
       searchError.value = msg || '搜索失败，请稍后重试'
     }

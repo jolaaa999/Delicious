@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/delicious/delicious/pkg/model"
 )
@@ -19,6 +21,9 @@ const spoonacularSource = "spoonacular"
 type spoonacularProvider struct {
 	client *http.Client
 	apiKey string
+
+	mu         sync.Mutex
+	quotaUntil time.Time // 免费额度用尽后冷却，避免反复 402 污染搜索
 }
 
 func newSpoonacularProvider(apiKey string, client *http.Client) *spoonacularProvider {
@@ -27,7 +32,23 @@ func newSpoonacularProvider(apiKey string, client *http.Client) *spoonacularProv
 
 func (p *spoonacularProvider) Name() string { return spoonacularSource }
 
+func (p *spoonacularProvider) quotaBlocked() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return time.Now().Before(p.quotaUntil)
+}
+
+func (p *spoonacularProvider) markQuotaExhausted() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	// Spoonacular 按日限额，冷却到下一小时段即可；12h 足够跨过当日额度重置前的无效重试
+	p.quotaUntil = time.Now().Add(12 * time.Hour)
+}
+
 func (p *spoonacularProvider) Search(ctx context.Context, keyword string, page, pageSize int) ([]OnlineRecipeHit, int, error) {
+	if p.quotaBlocked() {
+		return nil, 0, nil
+	}
 	offset := (page - 1) * pageSize
 	q := url.Values{}
 	q.Set("query", keyword)
@@ -37,6 +58,10 @@ func (p *spoonacularProvider) Search(ctx context.Context, keyword string, page, 
 	q.Set("apiKey", p.apiKey)
 	body, err := p.get(ctx, "https://api.spoonacular.com/recipes/complexSearch?"+q.Encode())
 	if err != nil {
+		if isProviderQuotaError(err) {
+			p.markQuotaExhausted()
+			return nil, 0, nil // 软失败：不阻断其它源
+		}
 		return nil, 0, err
 	}
 	var resp struct {
@@ -58,6 +83,9 @@ func (p *spoonacularProvider) Search(ctx context.Context, keyword string, page, 
 }
 
 func (p *spoonacularProvider) Fetch(ctx context.Context, externalID string) (*OnlineRecipeHit, error) {
+	if p.quotaBlocked() {
+		return nil, fmt.Errorf("spoonacular: daily quota exhausted")
+	}
 	rawURL := fmt.Sprintf(
 		"https://api.spoonacular.com/recipes/%s/information?includeNutrition=false&apiKey=%s",
 		url.PathEscape(externalID),
@@ -65,6 +93,9 @@ func (p *spoonacularProvider) Fetch(ctx context.Context, externalID string) (*On
 	)
 	body, err := p.get(ctx, rawURL)
 	if err != nil {
+		if isProviderQuotaError(err) {
+			p.markQuotaExhausted()
+		}
 		return nil, err
 	}
 	var detail spoonacularRecipeDetail
@@ -212,6 +243,19 @@ func stripHTML(s string) string {
 	s = htmlTagPattern.ReplaceAllString(s, "")
 	s = strings.ReplaceAll(s, "&nbsp;", " ")
 	return strings.TrimSpace(s)
+}
+
+// isProviderQuotaError 识别免费 API 额度/限流错误（402 Payment Required、429 Too Many Requests）。
+func isProviderQuotaError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "http 402") ||
+		strings.Contains(msg, "http 429") ||
+		strings.Contains(msg, "daily points limit") ||
+		strings.Contains(msg, "quota") ||
+		strings.Contains(msg, "rate limit")
 }
 
 func containsChinese(s string) bool {

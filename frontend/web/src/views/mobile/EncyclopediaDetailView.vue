@@ -119,9 +119,14 @@ function addToKitchen() {
 
 function formatIngredientAmount(ing: { amount?: number; unit?: string }) {
   const amount = Number(ing.amount)
-  const unit = (ing.unit || '').trim()
+  let unit = (ing.unit || '').trim()
+  // 拦截翻译污染 / 过长单位
+  const dirty = !unit || unit === '份' || unit === '待定' || unit.includes('千锋') || [...unit].length > 12
+  if (dirty) {
+    return !amount || amount === 0 ? '适量' : String(amount)
+  }
   if (!amount || amount === 0) {
-    return unit === '适量' ? '适量' : (unit && unit !== '份' ? unit : '适量')
+    return unit
   }
   return `${amount}${unit}`
 }

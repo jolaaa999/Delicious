@@ -601,7 +601,7 @@
 
 .ingredient-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
@@ -625,16 +625,26 @@
   color: var(--color-text);
 }
 
+.ingredient-item > span:first-child,
 .ingredient-item__name {
+  flex: 1;
+  min-width: 0;
   font-weight: 500;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .ingredient-item__amount,
 .amount {
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  max-width: 42%;
   font-size: 14px;
   font-weight: 600;
   color: var(--color-primary);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .step-item__num,

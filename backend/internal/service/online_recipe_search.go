@@ -75,13 +75,11 @@ func (s *OnlineRecipeSearch) Search(ctx context.Context, keyword string, page, p
 	seen := map[string]bool{}
 	allHits := make([]OnlineRecipeHit, 0, fetchSize)
 	totalMax := 0
-	var lastErr error
 
 	for _, kw := range keywords {
 		for _, p := range s.providers {
 			hits, total, err := p.Search(ctx, kw, 1, fetchSize)
 			if err != nil {
-				lastErr = err
 				continue
 			}
 			if total > totalMax {
@@ -99,9 +97,7 @@ func (s *OnlineRecipeSearch) Search(ctx context.Context, keyword string, page, p
 	}
 
 	if len(allHits) == 0 {
-		if lastErr != nil {
-			return nil, 0, lastErr
-		}
+		// 各源失败（含 Spoonacular 402 额度用尽）不向客户端暴露原始 API 错误
 		return nil, 0, nil
 	}
 

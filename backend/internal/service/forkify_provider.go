@@ -160,7 +160,11 @@ func (d forkifyDetail) toHit() OnlineRecipeHit {
 		}
 		unit := strings.TrimSpace(ing.Unit)
 		if unit == "" {
-			unit = "份"
+			if amount == 0 {
+				unit = "适量"
+			} else {
+				unit = "份"
+			}
 		}
 		ings = append(ings, model.Ingredient{Name: name, Amount: amount, Unit: unit})
 	}

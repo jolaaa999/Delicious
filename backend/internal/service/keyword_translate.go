@@ -80,7 +80,11 @@ func translateEnToZh(ctx context.Context, client *http.Client, text string) (str
 func CachedTranslate(ctx context.Context, c *cache.MemoryCache, client *http.Client, text, langPair string) (string, error) {
 	key := langPair + ":" + text
 	if val, ok := c.Get(key); ok {
-		return val, nil
+		if isSuspiciousTranslation(text, val) {
+			c.Delete(key) // 丢掉历史脏缓存，避免广告文反复命中
+		} else {
+			return val, nil
+		}
 	}
 	val, err := translateWithPair(ctx, client, text, langPair)
 	if err != nil {
@@ -94,11 +98,18 @@ func CachedTranslate(ctx context.Context, c *cache.MemoryCache, client *http.Cli
 func CachedTranslateLong(ctx context.Context, c *cache.MemoryCache, client *http.Client, text, langPair string) (string, error) {
 	key := "long:" + langPair + ":" + text
 	if val, ok := c.Get(key); ok {
-		return val, nil
+		if isSuspiciousTranslation(text, val) {
+			c.Delete(key)
+		} else {
+			return val, nil
+		}
 	}
 	val, err := translateLongText(ctx, client, text, langPair)
 	if err != nil {
 		return text, err
+	}
+	if isSuspiciousTranslation(text, val) {
+		return text, fmt.Errorf("suspicious translation")
 	}
 	c.Set(key, val)
 	return val, nil
@@ -137,6 +148,7 @@ func translateWithPair(ctx context.Context, client *http.Client, text, langPair 
 		ResponseData struct {
 			TranslatedText string `json:"translatedText"`
 		} `json:"responseData"`
+		ResponseStatus int `json:"responseStatus"`
 	}
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		return "", err
@@ -145,7 +157,45 @@ func translateWithPair(ctx context.Context, client *http.Client, text, langPair 
 	if translated == "" || strings.EqualFold(translated, text) {
 		return "", fmt.Errorf("empty translation")
 	}
+	if isSuspiciousTranslation(text, translated) {
+		return "", fmt.Errorf("suspicious translation")
+	}
 	return translated, nil
+}
+
+// isSuspiciousTranslation 拦截免费翻译接口常见的广告/灌水结果。
+func isSuspiciousTranslation(src, dst string) bool {
+	src = strings.TrimSpace(src)
+	dst = strings.TrimSpace(dst)
+	if dst == "" {
+		return true
+	}
+	// MyMemory 对短单位常返回无意义占位词
+	switch dst {
+	case "待定", "TBD", "N/A", "n/a", "未知", "无":
+		return true
+	}
+	spamMarkers := []string{
+		"千锋", "教育现有员工", "http://", "https://", "www.", "点击", "加微信",
+		"MYMEMORY WARNING", "INVALID LANGUAGE", "QUERY LENGTH", "PLEASE SELECT",
+		"免费试用", "在线咨询", "报名", "iq option",
+	}
+	upper := strings.ToUpper(dst)
+	for _, m := range spamMarkers {
+		if strings.Contains(dst, m) || strings.Contains(upper, strings.ToUpper(m)) {
+			return true
+		}
+	}
+	srcLen := len([]rune(src))
+	dstLen := len([]rune(dst))
+	// 短词（单位/食材名）被译成大段文字，几乎一定是脏数据
+	if srcLen <= 12 && dstLen > 24 {
+		return true
+	}
+	if srcLen > 0 && dstLen > srcLen*10 && dstLen > 40 {
+		return true
+	}
+	return false
 }
 
 // translateLongText 分段翻译，避免免费 API 单条长度限制。

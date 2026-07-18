@@ -110,17 +110,46 @@ func (s *EncyclopediaService) applyRecipeLang(ctx context.Context, recipe *dto.E
 		if isMostlyChinese(recipe.Name) {
 			return s.translateRecipeDTO(ctx, recipe, "zh-CN|en")
 		}
-		return recipe
+		return sanitizeIngredientUnits(recipe, "zh-CN|en")
 	}
+	var out *dto.EncyclopediaRecipeDTO
 	if isMostlyChinese(recipe.Name) {
-		return recipe
+		out = recipe
+	} else {
+		out = s.translateRecipeDTO(ctx, recipe, "en|zh-CN")
 	}
-	return s.translateRecipeDTO(ctx, recipe, "en|zh-CN")
+	return sanitizeIngredientUnits(out, "en|zh-CN")
+}
+
+// sanitizeIngredientUnits 清洗已缓存/已翻译的脏单位（广告文案等）。
+func sanitizeIngredientUnits(recipe *dto.EncyclopediaRecipeDTO, langPair string) *dto.EncyclopediaRecipeDTO {
+	if recipe == nil {
+		return nil
+	}
+	out := *recipe
+	ings := make([]dto.Ingredient, len(out.Ingredients))
+	copy(ings, out.Ingredients)
+	for i := range ings {
+		ings[i].Unit = localizeUnit(ings[i].Unit, langPair)
+	}
+	out.Ingredients = ings
+	return &out
 }
 
 func (s *EncyclopediaService) translateRecipeDTO(ctx context.Context, recipe *dto.EncyclopediaRecipeDTO, langPair string) *dto.EncyclopediaRecipeDTO {
 	client := s.translateClient()
 	out := *recipe
+	// 深拷贝切片，避免并发改写污染调用方/缓存中的原文
+	if len(recipe.Ingredients) > 0 {
+		ings := make([]dto.Ingredient, len(recipe.Ingredients))
+		copy(ings, recipe.Ingredients)
+		out.Ingredients = ings
+	}
+	if len(recipe.ProcessSteps) > 0 {
+		steps := make([]dto.ProcessStep, len(recipe.ProcessSteps))
+		copy(steps, recipe.ProcessSteps)
+		out.ProcessSteps = steps
+	}
 
 	if name, err := CachedTranslate(ctx, s.transCache, client, out.Name, langPair); err == nil {
 		out.Name = name
@@ -141,12 +170,13 @@ func (s *EncyclopediaService) translateRecipeDTO(ctx context.Context, recipe *dt
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			if name, err := CachedTranslate(ctx, s.transCache, client, out.Ingredients[idx].Name, langPair); err == nil {
+			origName := out.Ingredients[idx].Name
+			origUnit := out.Ingredients[idx].Unit
+			if name, err := CachedTranslate(ctx, s.transCache, client, origName, langPair); err == nil {
 				out.Ingredients[idx].Name = name
 			}
-			if unit, err := CachedTranslate(ctx, s.transCache, client, out.Ingredients[idx].Unit, langPair); err == nil {
-				out.Ingredients[idx].Unit = unit
-			}
+			// 单位绝不能走免费翻译 API（cup/clove/份 等短词常被灌成广告文）
+			out.Ingredients[idx].Unit = localizeUnit(origUnit, langPair)
 		}(i)
 	}
 	for i := range out.ProcessSteps {
@@ -179,4 +209,69 @@ func (s *EncyclopediaService) translateClient() *http.Client {
 		return s.httpClient
 	}
 	return &http.Client{Timeout: 12 * time.Second}
+}
+
+// localizeUnit 用本地词典处理烹饪单位，避免短词被 MyMemory 灌广告。
+func localizeUnit(unit, langPair string) string {
+	unit = strings.TrimSpace(unit)
+	toZh := strings.HasPrefix(langPair, "en") && strings.Contains(langPair, "zh")
+	fallback := "适量"
+	if !toZh {
+		fallback = "serving"
+	}
+	if unit == "" {
+		return fallback
+	}
+	// dirty / spam
+	if unit == "待定" || strings.Contains(unit, "千锋") || len([]rune(unit)) > 12 {
+		return fallback
+	}
+	key := strings.ToLower(unit)
+
+	enToZh := map[string]string{
+		"g": "克", "gram": "克", "grams": "克",
+		"kg": "千克", "kilogram": "千克", "kilograms": "千克",
+		"ml": "毫升", "milliliter": "毫升", "milliliters": "毫升",
+		"l": "升", "liter": "升", "litre": "升", "liters": "升", "litres": "升",
+		"cup": "杯", "cups": "杯",
+		"tbsp": "汤匙", "tbs": "汤匙", "tablespoon": "汤匙", "tablespoons": "汤匙",
+		"tsp": "茶匙", "teaspoon": "茶匙", "teaspoons": "茶匙",
+		"oz": "盎司", "ounce": "盎司", "ounces": "盎司",
+		"lb": "磅", "lbs": "磅", "pound": "磅", "pounds": "磅",
+		"clove": "瓣", "cloves": "瓣",
+		"piece": "个", "pieces": "个",
+		"slice": "片", "slices": "片",
+		"can": "罐", "cans": "罐",
+		"pinch": "少许", "dash": "少许",
+		"to taste": "适量", "taste": "适量",
+		"handful": "一把", "bunch": "把",
+		"stick": "根", "sticks": "根",
+		"serving": "份", "servings": "份",
+		"份": "份",
+	}
+
+	switch {
+	case strings.HasPrefix(langPair, "en") && strings.Contains(langPair, "zh"):
+		if v, ok := enToZh[key]; ok {
+			return v
+		}
+		if isMostlyChinese(unit) {
+			return unit
+		}
+		return unit
+	case strings.HasPrefix(langPair, "zh") && strings.Contains(langPair, "en"):
+		zhToEn := map[string]string{
+			"克": "g", "千克": "kg", "公斤": "kg", "毫升": "ml", "升": "l",
+			"杯": "cup", "汤匙": "tbsp", "茶匙": "tsp", "大勺": "tbsp", "小勺": "tsp",
+			"盎司": "oz", "磅": "lb", "瓣": "clove", "个": "piece", "片": "slice",
+			"罐": "can", "少许": "pinch", "适量": "to taste", "一把": "handful",
+			"把": "bunch", "根": "stick", "份": "serving",
+		}
+		if v, ok := zhToEn[unit]; ok {
+			return v
+		}
+		return unit
+	default:
+		return unit
+	}
 }

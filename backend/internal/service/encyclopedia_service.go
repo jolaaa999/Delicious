@@ -46,8 +46,17 @@ func (s *EncyclopediaService) Search(keyword, category, lang string, page, pageS
 	}
 
 	items, pageInfo, err := s.searchOnline(ctx, keyword, page, pageSize)
-	if err != nil {
-		return nil, dto.PageInfo{}, highlightTerms, err
+	if err != nil || len(items) == 0 {
+		// 联网无结果或单源失败时，回退本地已缓存百科
+		localItems, localInfo, localErr := s.searchLocal(keyword, category, page, pageSize)
+		if localErr == nil && len(localItems) > 0 {
+			return s.applyListLang(ctx, localItems, lang), localInfo, highlightTerms, nil
+		}
+		if err != nil {
+			// 不把 Spoonacular 402 等原始错误抛给前端
+			return []dto.EncyclopediaListItemDTO{}, pageInfoFrom(page, pageSize, 0), highlightTerms, nil
+		}
+		return []dto.EncyclopediaListItemDTO{}, pageInfoFrom(page, pageSize, 0), highlightTerms, nil
 	}
 	if category != "" {
 		filtered := make([]dto.EncyclopediaListItemDTO, 0, len(items))
@@ -64,6 +73,23 @@ func (s *EncyclopediaService) Search(keyword, category, lang string, page, pageS
 		}
 	}
 	return s.applyListLang(ctx, items, lang), pageInfo, highlightTerms, nil
+}
+
+func (s *EncyclopediaService) searchLocal(keyword, category string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
+	rows, total, err := s.repo.Search(repository.SearchFilter{
+		Keyword:  strings.TrimSpace(keyword),
+		Category: strings.TrimSpace(category),
+		Page:     page,
+		PageSize: pageSize,
+	})
+	if err != nil {
+		return nil, dto.PageInfo{}, err
+	}
+	items := make([]dto.EncyclopediaListItemDTO, 0, len(rows))
+	for i := range rows {
+		items = append(items, toListItemDTO(&rows[i]))
+	}
+	return items, pageInfoFrom(page, pageSize, total), nil
 }
 
 func (s *EncyclopediaService) searchOnline(ctx context.Context, keyword string, page, pageSize int) ([]dto.EncyclopediaListItemDTO, dto.PageInfo, error) {
