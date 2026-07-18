@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { deleteRecipe, getRecipe } from '@/api/recipe'
 import { useRecipeDiff, getDemoRecipe } from '@/composables/useRecipeDiff'
 import { useRecipeStore } from '@/stores/recipe'
@@ -9,6 +9,7 @@ import type { MyRecipe } from '@/types/recipe'
 import type { VersionListItem } from '@/types/diff'
 import VersionHistoryDrawer from '@/components/diff/VersionHistoryDrawer.vue'
 import DiffPanel from '@/components/diff/DiffPanel.vue'
+import ConfirmSheet from '@/components/mobile/ConfirmSheet.vue'
 import { resolveImageUrl } from '@/api/upload'
 
 const route = useRoute()
@@ -18,6 +19,7 @@ const recipeId = Number(route.params.id)
 const recipe = ref<MyRecipe | null>(null)
 const loading = ref(true)
 const deleting = ref(false)
+const deleteOpen = ref(false)
 const fromApi = ref(false)
 const showUnchanged = ref(false)
 const store = useRecipeStore()
@@ -83,23 +85,19 @@ async function onCompareEncyclopedia() {
   await compareEncyclopedia(currentVersion.value, recipe.value.name)
 }
 
-async function handleDelete() {
-  if (!recipe.value || !fromApi.value) return
-  try {
-    await ElMessageBox.confirm(
-      `确定删除「${recipe.value.name}」？删除后无法恢复。`,
-      '确认删除',
-      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
-    )
-  } catch {
-    return
-  }
+function openDeleteConfirm() {
+  if (!recipe.value || !fromApi.value || deleting.value) return
+  deleteOpen.value = true
+}
 
+async function confirmDelete() {
+  if (!recipe.value || !fromApi.value) return
   deleting.value = true
   try {
     await deleteRecipe(recipeId)
     store.items = store.items.filter((item) => item.id !== recipeId)
-    ElMessage.success('已删除')
+    deleteOpen.value = false
+    ElMessage.success('已移入回收站')
     router.replace('/m/kitchen')
   } catch (e: unknown) {
     ElMessage.error((e as { message?: string })?.message || '删除失败')
@@ -188,7 +186,7 @@ async function handleDelete() {
           type="button"
           class="delete-btn"
           :disabled="deleting"
-          @click="handleDelete"
+          @click="openDeleteConfirm"
         >
           {{ deleting ? '删除中…' : '删除此菜品' }}
         </button>
@@ -202,6 +200,18 @@ async function handleDelete() {
       :loading="versionsLoading"
       @close="closeHistoryDrawer"
       @select="onSelectVersion"
+    />
+
+    <ConfirmSheet
+      :open="deleteOpen"
+      title="移入回收站"
+      :message="`「${recipe?.name ?? ''}」将移入回收站，30 天内可恢复。`"
+      confirm-text="确认删除"
+      cancel-text="再想想"
+      tone="danger"
+      :loading="deleting"
+      @close="deleteOpen = false"
+      @confirm="confirmDelete"
     />
   </div>
 </template>

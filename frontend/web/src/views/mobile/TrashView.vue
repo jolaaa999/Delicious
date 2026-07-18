@@ -3,10 +3,14 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listTrashRecipes, restoreRecipe, permanentDeleteRecipe } from '@/api/recipe'
 import type { RecipeListItem } from '@/types/recipe'
+import ConfirmSheet from '@/components/mobile/ConfirmSheet.vue'
 
 const router = useRouter()
 const items = ref<RecipeListItem[]>([])
 const loading = ref(true)
+const purgeOpen = ref(false)
+const purging = ref(false)
+const purgeTarget = ref<RecipeListItem | null>(null)
 
 onMounted(() => { loadTrash() })
 
@@ -29,12 +33,23 @@ async function handleRestore(id: number) {
   } catch { /* ignore */ }
 }
 
-async function handlePermanentDelete(id: number) {
-  if (!confirm('彻底删除后不可恢复，确定吗？')) return
+function openPermanentDelete(item: RecipeListItem) {
+  purgeTarget.value = item
+  purgeOpen.value = true
+}
+
+async function confirmPermanentDelete() {
+  if (!purgeTarget.value) return
+  purging.value = true
   try {
-    await permanentDeleteRecipe(id)
-    items.value = items.value.filter(i => i.id !== id)
+    await permanentDeleteRecipe(purgeTarget.value.id)
+    items.value = items.value.filter(i => i.id !== purgeTarget.value!.id)
+    purgeOpen.value = false
+    purgeTarget.value = null
   } catch { /* ignore */ }
+  finally {
+    purging.value = false
+  }
 }
 
 function goBack() { router.back() }
@@ -61,9 +76,21 @@ function goBack() { router.back() }
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button class="toolbar-btn" type="button" @click="handleRestore(item.id)">恢复</button>
-          <button class="toolbar-btn" type="button" @click="handlePermanentDelete(item.id)" style="color:var(--color-danger);border-color:rgba(193,102,107,0.35);">彻底删除</button>
+          <button class="toolbar-btn" type="button" @click="openPermanentDelete(item)" style="color:var(--color-danger);border-color:rgba(193,102,107,0.35);">彻底删除</button>
         </div>
       </li>
     </ul>
+
+    <ConfirmSheet
+      :open="purgeOpen"
+      title="彻底删除"
+      :message="`「${purgeTarget?.name ?? ''}」将被永久删除，此操作不可恢复。`"
+      confirm-text="彻底删除"
+      cancel-text="再想想"
+      tone="danger"
+      :loading="purging"
+      @close="purgeOpen = false"
+      @confirm="confirmPermanentDelete"
+    />
   </div>
 </template>
