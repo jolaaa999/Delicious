@@ -351,6 +351,15 @@
   line-height: 1.3;
 }
 
+.recipe-card__name .name-hit {
+  margin: 0;
+  padding: 0 2px;
+  border-radius: 4px;
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
+  font: inherit;
+}
+
 .recipe-card__desc {
   margin: 0;
   font-size: 13px;
@@ -1141,6 +1150,33 @@
   background: var(--color-primary-soft);
   color: var(--color-primary);
   font-weight: 600;
+}
+
+.load-more {
+  padding: 20px 8px 8px;
+  text-align: center;
+}
+
+.load-more__text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.load-more__text--muted {
+  color: var(--color-text-muted);
+}
+
+.load-more__retry {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* ── 标签组 ── */

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/delicious/delicious/internal/config"
@@ -49,16 +50,31 @@ func (s *OnlineRecipeSearch) Search(ctx context.Context, keyword string, page, p
 	if !s.Enabled() || keyword == "" {
 		return nil, 0, fmt.Errorf("online search disabled")
 	}
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 12
+	}
 
 	keywords := expandSearchKeywords(ctx, s.httpClient, keyword)
+	// 拉取足够候选后再全局排序分页，保证跨页排序一致
+	fetchSize := page * pageSize
+	if fetchSize < pageSize {
+		fetchSize = pageSize
+	}
+	if fetchSize > 80 {
+		fetchSize = 80
+	}
+
 	seen := map[string]bool{}
-	allHits := make([]OnlineRecipeHit, 0, pageSize)
+	allHits := make([]OnlineRecipeHit, 0, fetchSize)
 	totalMax := 0
 	var lastErr error
 
 	for _, kw := range keywords {
 		for _, p := range s.providers {
-			hits, total, err := p.Search(ctx, kw, page, pageSize)
+			hits, total, err := p.Search(ctx, kw, 1, fetchSize)
 			if err != nil {
 				lastErr = err
 				continue
@@ -74,28 +90,85 @@ func (s *OnlineRecipeSearch) Search(ctx context.Context, keyword string, page, p
 				seen[key] = true
 				allHits = append(allHits, hit)
 			}
-			if len(allHits) >= pageSize {
-				break
-			}
-		}
-		if len(allHits) >= pageSize {
-			break
 		}
 	}
 
-	if len(allHits) > pageSize {
-		allHits = allHits[:pageSize]
-	}
 	if len(allHits) == 0 {
 		if lastErr != nil {
 			return nil, 0, lastErr
 		}
 		return nil, 0, nil
 	}
-	if totalMax == 0 {
+
+	s.enrichHitsForRanking(ctx, allHits, keywords)
+	sortHitsByRelevance(allHits, keywords)
+
+	if totalMax < len(allHits) {
 		totalMax = len(allHits)
 	}
-	return allHits, totalMax, nil
+
+	start := (page - 1) * pageSize
+	if start >= len(allHits) {
+		return nil, totalMax, nil
+	}
+	end := start + pageSize
+	if end > len(allHits) {
+		end = len(allHits)
+	}
+	return allHits[start:end], totalMax, nil
+}
+
+// enrichHitsForRanking 为标题未命中的结果补全材料/步骤，便于内容匹配排序。
+func (s *OnlineRecipeSearch) enrichHitsForRanking(ctx context.Context, hits []OnlineRecipeHit, keywords []string) {
+	type job struct{ idx int }
+	jobs := make([]job, 0)
+	for i := range hits {
+		if needsContentEnrichment(hits[i], keywords) {
+			jobs = append(jobs, job{idx: i})
+		}
+	}
+	if len(jobs) == 0 {
+		return
+	}
+	if len(jobs) > 24 {
+		jobs = jobs[:24]
+	}
+
+	sem := make(chan struct{}, 5)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for _, j := range jobs {
+		j := j
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			select {
+			case <-ctx.Done():
+				return
+			case sem <- struct{}{}:
+			}
+			defer func() { <-sem }()
+
+			hit := hits[j.idx]
+			detail, err := s.Fetch(ctx, hit.Source, hit.ExternalID)
+			if err != nil || detail == nil {
+				return
+			}
+			mu.Lock()
+			if len(hits[j.idx].Ingredients) == 0 {
+				hits[j.idx].Ingredients = detail.Ingredients
+			}
+			if len(hits[j.idx].ProcessSteps) == 0 {
+				hits[j.idx].ProcessSteps = detail.ProcessSteps
+			}
+			if hits[j.idx].Description == nil && detail.Description != nil {
+				hits[j.idx].Description = detail.Description
+			}
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
 }
 
 func (s *OnlineRecipeSearch) Fetch(ctx context.Context, source, externalID string) (*OnlineRecipeHit, error) {

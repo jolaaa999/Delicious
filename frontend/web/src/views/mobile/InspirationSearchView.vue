@@ -1,22 +1,33 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { searchEncyclopedia, listCategories } from '@/api/encyclopedia'
 import type { CategoryDTO } from '@/api/encyclopedia'
 import { resolveImageUrl } from '@/api/upload'
 import LangSwitch from '@/components/mobile/LangSwitch.vue'
 import type { EncyclopediaListItem } from '@/types/recipe'
+import { splitHighlightParts } from '@/utils/highlight'
+
+const PAGE_SIZE = 12
 
 const router = useRouter()
 const keyword = ref('')
 const items = ref<EncyclopediaListItem[]>([])
 const loading = ref(false)
+const loadingMore = ref(false)
 const searched = ref(false)
 const searchError = ref('')
 const displayLang = ref<'en' | 'zh'>('zh')
 const selectedCategory = ref('')
 const categories = ref<CategoryDTO[]>([])
 const filtersExpanded = ref(true)
+const page = ref(1)
+const hasMore = ref(false)
+const loadMoreError = ref('')
+const sentinel = ref<HTMLElement | null>(null)
+const highlightTerms = ref<string[]>([])
+
+let observer: IntersectionObserver | null = null
 
 onMounted(async () => {
   try {
@@ -25,27 +36,80 @@ onMounted(async () => {
   } catch {
     categories.value = []
   }
+  setupObserver()
 })
+
+onUnmounted(() => {
+  observer?.disconnect()
+  observer = null
+})
+
+function setupObserver() {
+  observer?.disconnect()
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        loadMore()
+      }
+    },
+    { root: null, rootMargin: '160px 0px', threshold: 0 },
+  )
+  if (sentinel.value) {
+    observer.observe(sentinel.value)
+  }
+}
+
+watch(sentinel, async (el) => {
+  await nextTick()
+  if (!observer) setupObserver()
+  observer?.disconnect()
+  if (el) observer?.observe(el)
+})
+
+async function fetchPage(nextPage: number, append: boolean) {
+  const params: Record<string, unknown> = {
+    keyword: keyword.value.trim(),
+    page: nextPage,
+    page_size: PAGE_SIZE,
+    lang: displayLang.value,
+  }
+  if (selectedCategory.value) {
+    params.category = selectedCategory.value
+  }
+
+  const res = await searchEncyclopedia(params)
+  const batch = res.items ?? []
+  if (res.highlight_terms?.length) {
+    highlightTerms.value = res.highlight_terms
+  } else if (!append) {
+    highlightTerms.value = [keyword.value.trim()].filter(Boolean)
+  }
+  if (append) {
+    const seen = new Set(items.value.map((i) => i.id))
+    items.value.push(...batch.filter((i) => !seen.has(i.id)))
+  } else {
+    items.value = batch
+  }
+
+  page.value = nextPage
+  // 本页满额则认为可能还有下一页；下一页不足再自然停住
+  hasMore.value = batch.length >= PAGE_SIZE
+}
 
 async function handleSearch() {
   if (!keyword.value.trim()) return
   loading.value = true
+  loadingMore.value = false
   searched.value = true
   searchError.value = ''
+  loadMoreError.value = ''
+  hasMore.value = false
+  page.value = 1
   try {
-    const params: Record<string, unknown> = {
-      keyword: keyword.value.trim(),
-      page: 1,
-      page_size: 12,
-      lang: displayLang.value,
-    }
-    if (selectedCategory.value) {
-      params.category = selectedCategory.value
-    }
-    const res = await searchEncyclopedia(params)
-    items.value = res.items ?? []
+    await fetchPage(1, false)
   } catch (e: unknown) {
     items.value = []
+    hasMore.value = false
     const msg = (e as { message?: string })?.message || ''
     if (msg.includes('timeout')) {
       searchError.value = '搜索超时，联网翻译较慢，请稍后重试'
@@ -54,6 +118,24 @@ async function handleSearch() {
     }
   } finally {
     loading.value = false
+  }
+}
+
+async function loadMore() {
+  if (!searched.value || !hasMore.value || loading.value || loadingMore.value) return
+  if (!keyword.value.trim()) return
+
+  loadingMore.value = true
+  loadMoreError.value = ''
+  try {
+    await fetchPage(page.value + 1, true)
+  } catch (e: unknown) {
+    const msg = (e as { message?: string })?.message || ''
+    loadMoreError.value = msg.includes('timeout')
+      ? '加载超时，请上滑重试'
+      : (msg || '加载失败，请重试')
+  } finally {
+    loadingMore.value = false
   }
 }
 
@@ -73,6 +155,10 @@ watch(displayLang, () => {
 function goDetail(id: number) {
   router.push({ path: `/m/inspiration/${id}`, query: { lang: displayLang.value } })
 }
+
+function nameParts(name: string) {
+  return splitHighlightParts(name, highlightTerms.value)
+}
 </script>
 
 <template>
@@ -84,7 +170,7 @@ function goDetail(id: number) {
           <h1 class="page-title">找灵感</h1>
           <p class="page-subtitle">联网搜索公开菜谱，发现新味道</p>
         </div>
-        <LangSwitch v-model="displayLang" :disabled="loading" />
+        <LangSwitch v-model="displayLang" :disabled="loading || loadingMore" />
       </div>
     </header>
 
@@ -102,12 +188,12 @@ function goDetail(id: number) {
           enterkeyhint="search"
           @keyup.enter="handleSearch"
         />
-        <button class="search-bar__btn" type="button" @click="handleSearch">搜索</button>
+        <button class="search-bar__btn" type="button" :disabled="loading" @click="handleSearch">搜索</button>
       </div>
       <p class="search-tip">支持中文菜名，结果来自 Spoonacular / TheMealDB / Forkify / DummyJSON</p>
 
       <div
-        v-if="searched && !loading && !searchError && items.length > 0 && categories.length"
+        v-if="searched && !searchError && items.length > 0 && categories.length"
         class="filter-panel"
       >
         <button
@@ -139,19 +225,38 @@ function goDetail(id: number) {
     <div v-else-if="searchError" class="state-card form-error">{{ searchError }}</div>
     <div v-else-if="searched && items.length === 0" class="state-card">未找到相关菜谱，换个关键词试试</div>
 
-    <ul v-else class="recipe-flow">
-      <li v-for="item in items" :key="item.id" class="recipe-card" @click="goDetail(item.id)">
-        <div class="recipe-card__cover">
-          <img v-if="item.cover_image_url" :src="resolveImageUrl(item.cover_image_url)" :alt="item.name" />
-          <div v-else class="recipe-card__placeholder">{{ item.name.charAt(0) }}</div>
-        </div>
-        <div class="recipe-card__body">
-          <h3 class="recipe-card__name">{{ item.name }}</h3>
-          <p v-if="item.description" class="recipe-card__desc">{{ item.description }}</p>
-          <div v-if="item.category" class="recipe-card__tag">{{ item.category }}</div>
-        </div>
-      </li>
-    </ul>
+    <template v-else-if="items.length > 0">
+      <ul class="recipe-flow">
+        <li v-for="item in items" :key="item.id" class="recipe-card" @click="goDetail(item.id)">
+          <div class="recipe-card__cover">
+            <img v-if="item.cover_image_url" :src="resolveImageUrl(item.cover_image_url)" :alt="item.name" />
+            <div v-else class="recipe-card__placeholder">{{ item.name.charAt(0) }}</div>
+          </div>
+          <div class="recipe-card__body">
+            <h3 class="recipe-card__name">
+              <template v-for="(part, idx) in nameParts(item.name)" :key="idx">
+                <mark v-if="part.hit" class="name-hit">{{ part.text }}</mark>
+                <template v-else>{{ part.text }}</template>
+              </template>
+            </h3>
+            <p v-if="item.description" class="recipe-card__desc">{{ item.description }}</p>
+            <div v-if="item.category" class="recipe-card__tag">{{ item.category }}</div>
+          </div>
+        </li>
+      </ul>
+
+      <div ref="sentinel" class="load-more" aria-live="polite">
+        <p v-if="loadingMore" class="load-more__text">正在加载更多…</p>
+        <button
+          v-else-if="loadMoreError"
+          type="button"
+          class="load-more__retry"
+          @click="loadMore"
+        >{{ loadMoreError }}</button>
+        <p v-else-if="hasMore" class="load-more__text">下滑加载更多</p>
+        <p v-else class="load-more__text load-more__text--muted">已经到底了</p>
+      </div>
+    </template>
 
     <div v-if="!searched && !loading" class="empty-hint">
       <p>输入菜名，从百科中寻找烹饪灵感</p>

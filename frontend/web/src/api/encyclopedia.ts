@@ -7,6 +7,7 @@ const DETAIL_TIMEOUT_MS = 90000
 export interface SearchResult {
   items: EncyclopediaListItem[]
   page_info: { page: number; page_size: number; total: number; total_pages: number }
+  highlight_terms?: string[]
 }
 
 export function searchEncyclopedia(params: Record<string, unknown>) {

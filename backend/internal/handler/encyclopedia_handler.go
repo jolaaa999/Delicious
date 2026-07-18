@@ -33,12 +33,16 @@ func NewEncyclopediaHandler(svc *service.EncyclopediaService) *EncyclopediaHandl
 func (h *EncyclopediaHandler) Search(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	items, pageInfo, err := h.svc.Search(c.Query("keyword"), c.Query("category"), c.Query("lang"), page, pageSize)
+	items, pageInfo, highlightTerms, err := h.svc.Search(c.Query("keyword"), c.Query("category"), c.Query("lang"), page, pageSize)
 	if err != nil {
 		middleware.InternalError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"items": items, "page_info": pageInfo})
+	c.JSON(http.StatusOK, gin.H{
+		"items":           items,
+		"page_info":       pageInfo,
+		"highlight_terms": highlightTerms,
+	})
 }
 
 // Get 百科菜谱详情
