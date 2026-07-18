@@ -47,14 +47,10 @@ func (s *EncyclopediaService) Search(keyword, category, lang string, page, pageS
 
 	items, pageInfo, err := s.searchOnline(ctx, keyword, page, pageSize)
 	if err != nil || len(items) == 0 {
-		// 联网无结果或单源失败时，回退本地已缓存百科
+		// 联网失败或无结果 → 回退本地缓存；绝不把单源 API 错误抛给前端
 		localItems, localInfo, localErr := s.searchLocal(keyword, category, page, pageSize)
 		if localErr == nil && len(localItems) > 0 {
 			return s.applyListLang(ctx, localItems, lang), localInfo, highlightTerms, nil
-		}
-		if err != nil {
-			// 不把 Spoonacular 402 等原始错误抛给前端
-			return []dto.EncyclopediaListItemDTO{}, pageInfoFrom(page, pageSize, 0), highlightTerms, nil
 		}
 		return []dto.EncyclopediaListItemDTO{}, pageInfoFrom(page, pageSize, 0), highlightTerms, nil
 	}

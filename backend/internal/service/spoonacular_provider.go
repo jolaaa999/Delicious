@@ -60,9 +60,9 @@ func (p *spoonacularProvider) Search(ctx context.Context, keyword string, page, 
 	if err != nil {
 		if isProviderQuotaError(err) {
 			p.markQuotaExhausted()
-			return nil, 0, nil // 软失败：不阻断其它源
 		}
-		return nil, 0, err
+		// 额度/网络等错误一律软失败，交给其它源继续搜
+		return nil, 0, nil
 	}
 	var resp struct {
 		Results      []spoonacularSearchItem `json:"results"`
