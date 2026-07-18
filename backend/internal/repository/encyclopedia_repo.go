@@ -116,3 +116,13 @@ func (r *EncyclopediaRepository) UpsertExternal(recipe model.EncyclopediaRecipe)
 	}
 	return &existing, nil
 }
+
+// GetByExternal 按外部来源+ID查找记录
+func (r *EncyclopediaRepository) GetByExternal(source, externalID string) (*model.EncyclopediaRecipe, error) {
+	var recipe model.EncyclopediaRecipe
+	err := r.db.Where("external_source = ? AND external_id = ?", source, externalID).First(&recipe).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &recipe, err
+}

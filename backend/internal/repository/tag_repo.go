@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"github.com/delicious/delicious/pkg/model"
 	"gorm.io/gorm"
 )
@@ -105,4 +107,39 @@ func (r *TagRepository) TagExists(name string) (bool, error) {
 	var count int64
 	err := r.db.Model(&model.Tag{}).Where("name = ?", name).Count(&count).Error
 	return count > 0, err
+}
+
+// SyncTagsForRecipe 同步食谱标签：对每个标签名 find-or-create，然后全量替换关联关系
+func (r *TagRepository) SyncTagsForRecipe(recipeID uint64, tagNames []string) error {
+	if len(tagNames) == 0 {
+		return nil
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 清除旧关联
+		if err := tx.Where("recipe_id = ?", recipeID).Delete(&model.EncyclopediaRecipeTag{}).Error; err != nil {
+			return err
+		}
+		for _, name := range tagNames {
+			if name == "" {
+				continue
+			}
+			var tag model.Tag
+			err := tx.Where("name = ?", name).First(&tag).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				tag = model.Tag{Name: name}
+				if err := tx.Create(&tag).Error; err != nil {
+					return err
+				}
+			} else if err != nil {
+				return err
+			}
+			if err := tx.Create(&model.EncyclopediaRecipeTag{
+				RecipeID: recipeID,
+				TagID:    tag.ID,
+			}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

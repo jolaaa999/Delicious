@@ -53,7 +53,7 @@ func initApp() {
 		tagRepo := repository.NewTagRepository(db)
 
 		recipeSvc := service.NewRecipeService(recipeRepo, encyRepo)
-		encySvc := service.NewEncyclopediaService(encyRepo, cfg)
+		encySvc := service.NewEncyclopediaService(encyRepo, tagRepo, cfg)
 		dashSvc := service.NewDashboardService(recipeRepo)
 		categorySvc := service.NewCategoryService(categoryRepo)
 		tagSvc := service.NewTagService(tagRepo)

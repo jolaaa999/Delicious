@@ -16,14 +16,16 @@ import (
 
 type EncyclopediaService struct {
 	repo       *repository.EncyclopediaRepository
+	tagRepo    *repository.TagRepository
 	online     *OnlineRecipeSearch
 	httpClient *http.Client
 	transCache *cache.MemoryCache
 }
 
-func NewEncyclopediaService(repo *repository.EncyclopediaRepository, cfg config.Config) *EncyclopediaService {
+func NewEncyclopediaService(repo *repository.EncyclopediaRepository, tagRepo *repository.TagRepository, cfg config.Config) *EncyclopediaService {
 	return &EncyclopediaService{
 		repo:       repo,
+		tagRepo:    tagRepo,
 		online:     NewOnlineRecipeSearch(cfg),
 		httpClient: &http.Client{Timeout: 15 * time.Second},
 		transCache: cache.New(1 * time.Hour),
@@ -69,7 +71,7 @@ func (s *EncyclopediaService) searchOnline(ctx context.Context, keyword string, 
 	if err != nil || len(hits) == 0 {
 		return nil, dto.PageInfo{}, err
 	}
-	cached, err := cacheOnlineHits(s.repo, hits)
+	cached, err := cacheOnlineHits(s.repo, s.tagRepo, hits)
 	if err != nil {
 		return nil, dto.PageInfo{}, err
 	}

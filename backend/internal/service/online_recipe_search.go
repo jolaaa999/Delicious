@@ -184,13 +184,24 @@ func (s *OnlineRecipeSearch) Fetch(ctx context.Context, source, externalID strin
 	return nil, fmt.Errorf("unknown online source: %s", source)
 }
 
-func cacheOnlineHits(repo *repository.EncyclopediaRepository, hits []OnlineRecipeHit) ([]repository.CachedOnlineHit, error) {
+func cacheOnlineHits(repo *repository.EncyclopediaRepository, tagRepo *repository.TagRepository, hits []OnlineRecipeHit) ([]repository.CachedOnlineHit, error) {
 	out := make([]repository.CachedOnlineHit, 0, len(hits))
 	for _, hit := range hits {
-		item, err := repo.UpsertExternal(hit.toModel())
+		// 映射英文分类→中文分类
+		if hit.Category != nil {
+			mapped := MapCategory(*hit.Category)
+			hit.Category = &mapped
+		}
+		// 映射英文标签→中文标签
+		hit.Tags = MapTags(hit.Tags)
+
+		model := hit.toModel()
+		item, err := repo.UpsertExternal(model)
 		if err != nil {
 			return nil, err
 		}
+		// 同步中文标签到关联表
+		_ = tagRepo.SyncTagsForRecipe(item.ID, hit.Tags)
 		out = append(out, repository.CachedOnlineHit{ID: item.ID, Recipe: *item})
 	}
 	return out, nil
