@@ -190,7 +190,7 @@ function nameParts(name: string) {
         />
         <button class="search-bar__btn" type="button" :disabled="loading" @click="handleSearch">搜索</button>
       </div>
-      <p class="search-tip">支持中文菜名，结果来自 Spoonacular / TheMealDB / Forkify / DummyJSON</p>
+      <p class="search-tip">支持中文菜名，优先检索 HowToCook / 厨房计划，并聚合 Spoonacular / TheMealDB / Forkify / DummyJSON</p>
 
       <div
         v-if="searched && !searchError && items.length > 0 && categories.length"

@@ -48,6 +48,8 @@ const sourceLabel = computed(() => {
   if (src === 'themealdb') return '来源：TheMealDB 公开菜谱'
   if (src === 'forkify') return '来源：Forkify 公开菜谱'
   if (src === 'dummyjson') return '来源：DummyJSON 示例菜谱'
+  if (src === 'howtocook') return '来源：HowToCook 开源中文菜谱'
+  if (src === 'projkitchen') return '来源：厨房计划 Proj.Kitchen'
   return `来源：${src}`
 })
 

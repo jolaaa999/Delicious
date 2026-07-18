@@ -27,6 +27,11 @@ type OnlineRecipeSearch struct {
 func NewOnlineRecipeSearch(cfg config.Config) *OnlineRecipeSearch {
 	client := &http.Client{Timeout: 15 * time.Second}
 	var providers []onlineRecipeProvider
+	// 中文免费源优先，提升家常菜命中率
+	providers = append(providers,
+		newHowToCookProvider(client),
+		newProjKitchenProvider(client),
+	)
 	if cfg.SpoonacularAPIKey != "" {
 		providers = append(providers, newSpoonacularProvider(cfg.SpoonacularAPIKey, client))
 	}

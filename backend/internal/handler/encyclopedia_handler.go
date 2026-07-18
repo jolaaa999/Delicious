@@ -19,7 +19,7 @@ func NewEncyclopediaHandler(svc *service.EncyclopediaService) *EncyclopediaHandl
 
 // Search 搜索百科菜谱
 // @Summary      搜索百科菜谱
-// @Description  搜索百科菜谱库。聚合 Spoonacular、TheMealDB、Forkify、DummyJSON 等公开 API；结果会缓存到数据库供详情查看。支持中英翻译
+// @Description  搜索百科菜谱库。优先聚合免费中文源 HowToCook、Proj.Kitchen，并辅以 Spoonacular、TheMealDB、Forkify、DummyJSON；结果会缓存到数据库供详情查看。支持中英翻译
 // @Tags         百科菜谱
 // @Produce      json
 // @Param        keyword    query  string  false  "搜索关键词（中英文均可）"
