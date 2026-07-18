@@ -25,7 +25,7 @@ const page = ref(1)
 const hasMore = ref(false)
 const loadMoreError = ref('')
 const sentinel = ref<HTMLElement | null>(null)
-const highlightTerms = ref<string[]>([])
+const activeKeyword = ref('')
 
 let observer: IntersectionObserver | null = null
 
@@ -79,10 +79,8 @@ async function fetchPage(nextPage: number, append: boolean) {
 
   const res = await searchEncyclopedia(params)
   const batch = res.items ?? []
-  if (res.highlight_terms?.length) {
-    highlightTerms.value = res.highlight_terms
-  } else if (!append) {
-    highlightTerms.value = [keyword.value.trim()].filter(Boolean)
+  if (!append) {
+    activeKeyword.value = keyword.value.trim()
   }
   if (append) {
     const seen = new Set(items.value.map((i) => i.id))
@@ -157,7 +155,9 @@ function goDetail(id: number) {
 }
 
 function nameParts(name: string) {
-  return splitHighlightParts(name, highlightTerms.value)
+  // 只按用户输入关键词与菜名的公共片段高亮（如「鸡柳」→「鸡肉…」中的「鸡」）
+  if (!activeKeyword.value) return [{ text: name, hit: false }]
+  return splitHighlightParts(name, [activeKeyword.value])
 }
 </script>
 
