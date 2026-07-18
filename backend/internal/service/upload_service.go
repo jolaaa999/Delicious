@@ -130,6 +130,8 @@ func (s *UploadService) saveToBlob(data []byte, mime, ext, originalName string, 
 	req.Header.Set("x-api-version", "7")
 	req.Header.Set("x-content-type", mime)
 	req.Header.Set("x-add-random-suffix", "0")
+	// 菜品图需在浏览器直接展示，必须使用 Public store，并与 access 声明一致
+	req.Header.Set("x-vercel-blob-access", "public")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
