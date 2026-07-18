@@ -78,6 +78,12 @@ const mobileRoutes = [
         meta: { tab: 'kitchen', title: '我的厨房', isMobile: true },
       },
       {
+        path: 'kitchen/trash',
+        name: 'MobileTrash',
+        component: () => import('@/views/mobile/TrashView.vue'),
+        meta: { title: '回收站', hideTabBar: true, isMobile: true },
+      },
+      {
         path: 'kitchen/new',
         name: 'MobileRecipeCreate',
         component: () => import('@/views/mobile/RecipeCreateView.vue'),

@@ -4,6 +4,10 @@ import (
 	"github.com/delicious/delicious/internal/config"
 	"github.com/delicious/delicious/internal/middleware"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "github.com/delicious/delicious/docs" // swag init 生成的 docs 包
 )
 
 type Handlers struct {
@@ -17,9 +21,14 @@ type Handlers struct {
 
 func Register(r *gin.Engine, cfg config.Config, h Handlers) {
 	r.Use(corsMiddleware())
+
+	// Health
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+
+	// Swagger UI
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 本地开发时提供静态文件；Vercel 使用 Blob 存储，不走本地目录
 	if cfg.UploadDir != "" {
@@ -53,7 +62,7 @@ func Register(r *gin.Engine, cfg config.Config, h Handlers) {
 	v1.POST("/encyclopedia/:id/tags", h.Tag.AddToRecipe)
 	v1.DELETE("/encyclopedia/:id/tags/:tag_id", h.Tag.RemoveFromRecipe)
 
-	// Recipes
+	// Recipes — 无参数路由放在 :id 前避免匹配冲突
 	v1.POST("/recipes", h.Recipe.Create)
 	v1.GET("/recipes", h.Recipe.List)
 	v1.GET("/recipes/trash", h.Recipe.ListTrash)
@@ -68,13 +77,13 @@ func Register(r *gin.Engine, cfg config.Config, h Handlers) {
 	v1.GET("/recipes/:id/versions/:version_id", h.Recipe.GetVersion)
 	v1.GET("/recipes/:id/diff", h.Recipe.CompareVersions)
 	v1.GET("/recipes/:id/diff/encyclopedia", h.Recipe.CompareEncyclopedia)
-	v1.GET("/recipes/:id/compare-encyclopedia", h.Recipe.CompareEncyclopedia) // 兼容旧版前端路径
+	v1.GET("/recipes/:id/compare-encyclopedia", h.Recipe.CompareEncyclopedia) // 兼容旧版
 
 	// Admin — 图片清理
 	v1.POST("/admin/cleanup-images", h.Upload.CleanupScan)
 	v1.POST("/admin/cleanup-images/execute", h.Upload.CleanupExecute)
 
-		// Dashboard
+	// Dashboard
 	v1.GET("/dashboard/stats", h.Dashboard.Stats)
 	v1.GET("/dashboard/recipes/:id/timeline", h.Dashboard.Timeline)
 }

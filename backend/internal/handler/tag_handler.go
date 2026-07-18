@@ -17,7 +17,13 @@ func NewTagHandler(svc *service.TagService) *TagHandler {
 	return &TagHandler{svc: svc}
 }
 
-// List 获取所有标签
+// List 标签列表
+// @Summary      标签列表
+// @Description  获取全部标签（字典表）
+// @Tags         标签管理
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "items"
+// @Router       /tags [get]
 func (h *TagHandler) List(c *gin.Context) {
 	items, err := h.svc.List()
 	if err != nil {
@@ -27,7 +33,16 @@ func (h *TagHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"items": items})
 }
 
-// Create 创建新标签
+// Create 创建标签
+// @Summary      创建标签
+// @Description  新增一个标签名称
+// @Tags         标签管理
+// @Accept       json
+// @Produce      json
+// @Param        body  body  map[string]string  true  "{\"name\":\"快手菜\"}"
+// @Success      201   {object}  map[string]interface{}  "tag"
+// @Failure      400   {object}  map[string]string  "名称不能为空"
+// @Router       /tags [post]
 func (h *TagHandler) Create(c *gin.Context) {
 	var req struct {
 		Name string `json:"name" binding:"required"`
@@ -45,6 +60,14 @@ func (h *TagHandler) Create(c *gin.Context) {
 }
 
 // Delete 删除标签
+// @Summary      删除标签
+// @Description  删除一个标签（同时清除关联关系）
+// @Tags         标签管理
+// @Produce      json
+// @Param        id   path  int  true  "标签 ID"
+// @Success      200  {object}  map[string]interface{}  "{}"
+// @Failure      404  {object}  map[string]string  "标签不存在"
+// @Router       /tags/{id} [delete]
 func (h *TagHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -59,6 +82,13 @@ func (h *TagHandler) Delete(c *gin.Context) {
 }
 
 // ListByRecipe 获取菜谱关联的标签
+// @Summary      获取菜谱关联的标签
+// @Description  查看某个百科菜谱的所有标签
+// @Tags         标签管理
+// @Produce      json
+// @Param        id   path  int  true  "百科菜谱 ID"
+// @Success      200  {object}  map[string]interface{}  "items"
+// @Router       /encyclopedia/{id}/tags [get]
 func (h *TagHandler) ListByRecipe(c *gin.Context) {
 	recipeID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -74,6 +104,16 @@ func (h *TagHandler) ListByRecipe(c *gin.Context) {
 }
 
 // AddToRecipe 给菜谱添加标签
+// @Summary      给菜谱添加标签
+// @Description  为百科菜谱关联一个标签
+// @Tags         标签管理
+// @Accept       json
+// @Produce      json
+// @Param        id    path  int                true  "百科菜谱 ID"
+// @Param        body  body  map[string]uint64   true  "{\"tag_id\":1}"
+// @Success      201   {object}  map[string]interface{}  "{}"
+// @Failure      400   {object}  map[string]string  "tag_id 无效"
+// @Router       /encyclopedia/{id}/tags [post]
 func (h *TagHandler) AddToRecipe(c *gin.Context) {
 	recipeID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -95,6 +135,15 @@ func (h *TagHandler) AddToRecipe(c *gin.Context) {
 }
 
 // RemoveFromRecipe 移除菜谱的标签
+// @Summary      移除菜谱的标签
+// @Description  取消百科菜谱与标签的关联
+// @Tags         标签管理
+// @Produce      json
+// @Param        id      path  int  true  "百科菜谱 ID"
+// @Param        tag_id  path  int  true  "标签 ID"
+// @Success      200  {object}  map[string]interface{}  "{}"
+// @Failure      404  {object}  map[string]string  "关联不存在"
+// @Router       /encyclopedia/{id}/tags/{tag_id} [delete]
 func (h *TagHandler) RemoveFromRecipe(c *gin.Context) {
 	recipeID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

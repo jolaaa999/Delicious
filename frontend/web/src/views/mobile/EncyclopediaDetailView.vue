@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getEncyclopedia } from '@/api/encyclopedia'
+import { getEncyclopedia, getEncyclopediaTags } from '@/api/encyclopedia'
+import type { TagDTO } from '@/api/encyclopedia'
 import LangSwitch from '@/components/mobile/LangSwitch.vue'
 import type { Ingredient, ProcessStep } from '@/types/recipe'
 
@@ -28,6 +29,16 @@ const displayLang = ref<'en' | 'zh'>(
 )
 const recipeCache = ref<Partial<Record<'en' | 'zh', EncyclopediaDetail>>>({})
 const ready = ref(false)
+const tags = ref<TagDTO[]>([])
+
+async function loadTags() {
+  try {
+    const res = await getEncyclopediaTags(id)
+    tags.value = res.items ?? []
+  } catch {
+    tags.value = []
+  }
+}
 
 const sourceLabel = computed(() => {
   const src = recipe.value?.source
@@ -53,9 +64,9 @@ async function loadRecipe(lang: 'en' | 'zh', options?: { silent?: boolean }) {
     translating.value = true
   }
   try {
-    const res = await getEncyclopedia(id, { lang }) as { recipe: EncyclopediaDetail }
-    recipeCache.value[lang] = res.recipe
-    recipe.value = res.recipe
+    const res = await getEncyclopedia(id, { lang })
+    recipeCache.value[lang] = res
+    recipe.value = res
   } catch {
     if (!recipe.value) recipe.value = null
   } finally {
@@ -85,6 +96,7 @@ onMounted(async () => {
     loading.value = false
     ready.value = true
   }
+  loadTags()
 })
 
 watch(displayLang, async (lang) => {
@@ -120,6 +132,9 @@ function addToKitchen() {
           <h1 class="hero__name">{{ recipe.name }}</h1>
           <p v-if="recipe.description" class="hero__desc">{{ recipe.description }}</p>
           <div v-if="recipe.category" class="hero__tag">{{ recipe.category }}</div>
+          <div v-if="tags.length" class="hero__tags">
+            <span v-for="t in tags" :key="t.id" class="hero__tag hero__tag--secondary">{{ t.name }}</span>
+          </div>
           <p v-if="sourceLabel" class="hero__source">{{ sourceLabel }}</p>
         </div>
       </section>

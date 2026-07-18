@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { searchEncyclopedia } from '@/api/encyclopedia'
+import { searchEncyclopedia, listCategories } from '@/api/encyclopedia'
+import type { CategoryDTO } from '@/api/encyclopedia'
 import { resolveImageUrl } from '@/api/upload'
 import LangSwitch from '@/components/mobile/LangSwitch.vue'
 import type { EncyclopediaListItem } from '@/types/recipe'
@@ -13,6 +14,17 @@ const loading = ref(false)
 const searched = ref(false)
 const searchError = ref('')
 const displayLang = ref<'en' | 'zh'>('zh')
+const selectedCategory = ref('')
+const categories = ref<CategoryDTO[]>([])
+
+onMounted(async () => {
+  try {
+    const res = await listCategories()
+    categories.value = res.items ?? []
+  } catch {
+    categories.value = []
+  }
+})
 
 async function handleSearch() {
   if (!keyword.value.trim()) return
@@ -20,12 +32,16 @@ async function handleSearch() {
   searched.value = true
   searchError.value = ''
   try {
-    const res = await searchEncyclopedia({
+    const params: Record<string, unknown> = {
       keyword: keyword.value.trim(),
       page: 1,
       page_size: 12,
       lang: displayLang.value,
-    })
+    }
+    if (selectedCategory.value) {
+      params.category = selectedCategory.value
+    }
+    const res = await searchEncyclopedia(params)
     items.value = res.items ?? []
   } catch (e: unknown) {
     items.value = []
@@ -81,6 +97,16 @@ function goDetail(id: number) {
         <button class="search-bar__btn" type="button" @click="handleSearch">搜索</button>
       </div>
       <p class="search-tip">支持中文菜名，结果来自 Spoonacular / TheMealDB 公开菜谱库</p>
+      <div v-if="categories.length" class="category-chips">
+        <button
+          v-for="cat in categories"
+          :key="cat.id"
+          type="button"
+          class="chip"
+          :class="{ 'chip--active': selectedCategory === cat.name }"
+          @click="selectedCategory = selectedCategory === cat.name ? '' : cat.name"
+        >{{ cat.name }}</button>
+      </div>
     </div>
 
     <div v-if="loading" class="state-card">正在寻找灵感…</div>

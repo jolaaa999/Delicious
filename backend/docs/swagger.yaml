@@ -1,0 +1,944 @@
+basePath: /api/v1
+host: localhost:8080
+info:
+  contact:
+    name: Delicious Team
+  description: |-
+    家庭菜谱管理系统 — 支持菜谱版本控制、百科搜索、翻译、导入导出
+    所有接口前缀 /api/v1，单用户模式（无需认证）
+  title: 人间烟火 (Delicious) API
+  version: "2.0"
+paths:
+  /admin/cleanup-images:
+    post:
+      description: 对比数据库引用和磁盘文件，列出未被引用的孤立图片。仅本地存储模式可用
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'result: total_files, orphan_files, freed_bytes'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Blob 存储不支持此功能
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 扫描孤立图片
+      tags:
+      - 系统管理
+  /admin/cleanup-images/execute:
+    post:
+      description: 删除所有未被引用的孤立图片。仅本地存储模式可用
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'result: total_files, orphan_files(已删除), freed_bytes'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Blob 存储不支持此功能
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 执行图片清理
+      tags:
+      - 系统管理
+  /categories:
+    get:
+      description: 获取全部分类（字典表）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: items
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 分类列表
+      tags:
+      - 分类管理
+    post:
+      consumes:
+      - application/json
+      description: 新增一个分类名称
+      parameters:
+      - description: '{\'
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: category
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 名称不能为空
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 创建分类
+      tags:
+      - 分类管理
+  /categories/{id}:
+    delete:
+      description: 删除一个分类
+      parameters:
+      - description: 分类 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{}'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 分类不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 删除分类
+      tags:
+      - 分类管理
+    put:
+      consumes:
+      - application/json
+      description: 修改分类名称
+      parameters:
+      - description: 分类 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: '{\'
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: category
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 无效 ID 或名称为空
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 修改分类
+      tags:
+      - 分类管理
+  /dashboard/recipes/{id}/timeline:
+    get:
+      description: 获取菜谱完整时间线：基本信息 + 所有版本节点 + 当前版本标记
+      parameters:
+      - description: 菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: recipe, timeline[]
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 菜谱不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 菜谱时间线
+      tags:
+      - 数据面板
+  /dashboard/stats:
+    get:
+      description: 返回当前用户的统计概览：总菜谱数、平均评分、总版本数、评分分布
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: total_recipes, average_rating, total_versions, rating_distribution[],
+            latest_recipe_at
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 数据总览
+      tags:
+      - 数据面板
+  /encyclopedia/{id}:
+    get:
+      description: 获取百科菜谱的完整信息，包括配料和制作步骤。浏览量自动 +1。支持翻译
+      parameters:
+      - description: 百科菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 返回语言 zh/en
+        in: query
+        name: lang
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: recipe
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 菜谱不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 百科菜谱详情
+      tags:
+      - 百科菜谱
+  /encyclopedia/{id}/tags:
+    get:
+      description: 查看某个百科菜谱的所有标签
+      parameters:
+      - description: 百科菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: items
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取菜谱关联的标签
+      tags:
+      - 标签管理
+    post:
+      consumes:
+      - application/json
+      description: 为百科菜谱关联一个标签
+      parameters:
+      - description: 百科菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: '{\'
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties:
+            format: int64
+            type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: '{}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: tag_id 无效
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 给菜谱添加标签
+      tags:
+      - 标签管理
+  /encyclopedia/{id}/tags/{tag_id}:
+    delete:
+      description: 取消百科菜谱与标签的关联
+      parameters:
+      - description: 百科菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 标签 ID
+        in: path
+        name: tag_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{}'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 关联不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 移除菜谱的标签
+      tags:
+      - 标签管理
+  /encyclopedia/category/{category}:
+    get:
+      description: 获取某个分类下的所有百科菜谱
+      parameters:
+      - description: 分类名称，如 川菜、西餐
+        in: path
+        name: category
+        required: true
+        type: string
+      - description: 返回语言 zh/en
+        in: query
+        name: lang
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: items[], page_info
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 按分类浏览百科
+      tags:
+      - 百科菜谱
+  /encyclopedia/search:
+    get:
+      description: 搜索百科菜谱库。优先从外部 API（Spoonacular + MealDB）搜索，无结果或禁用时回退本地数据库。支持中英翻译
+      parameters:
+      - description: 搜索关键词（中英文均可）
+        in: query
+        name: keyword
+        type: string
+      - description: 分类筛选
+        in: query
+        name: category
+        type: string
+      - default: en
+        description: 返回语言 zh/en
+        in: query
+        name: lang
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: items[], page_info
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务端错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 搜索百科菜谱
+      tags:
+      - 百科菜谱
+  /recipes:
+    get:
+      description: 分页获取当前用户的菜谱列表，支持关键词搜索、评分筛选、排序
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 菜名搜索关键词
+        in: query
+        name: keyword
+        type: string
+      - description: 最低评分 (1-5)
+        in: query
+        name: min_rating
+        type: integer
+      - description: 最高评分 (1-5)
+        in: query
+        name: max_rating
+        type: integer
+      - default: updated_at
+        description: 排序字段
+        enum:
+        - created_at
+        - updated_at
+        - user_rating
+        in: query
+        name: order_by
+        type: string
+      - default: true
+        description: 是否降序
+        in: query
+        name: desc
+        type: boolean
+      - description: 创建时间起点 (RFC3339)
+        in: query
+        name: created_after
+        type: string
+      - description: 创建时间终点 (RFC3339)
+        in: query
+        name: created_before
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: items[], page_info
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 菜谱列表
+      tags:
+      - 菜谱管理
+    post:
+      consumes:
+      - application/json
+      description: 新建菜谱并自动创建第一个版本（version 1）
+      parameters:
+      - description: 菜谱信息
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: recipe
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服务端错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 创建菜谱
+      tags:
+      - 菜谱管理
+  /recipes/{id}:
+    delete:
+      description: 软删除菜谱，移入回收站。30 天内可通过 /restore 恢复
+      parameters:
+      - description: 菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{}'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 菜谱不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 删除菜谱（软删除）
+      tags:
+      - 菜谱管理
+    get:
+      description: 根据 ID 获取菜谱及当前版本完整信息
+      parameters:
+      - description: 菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: recipe
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 菜谱不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取菜谱详情
+      tags:
+      - 菜谱管理
+    put:
+      consumes:
+      - application/json
+      description: 编辑菜谱会新增一个不可变版本（版本号+1），不会修改旧版本
+      parameters:
+      - description: 菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新内容
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: recipe
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 菜谱不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 编辑菜谱
+      tags:
+      - 菜谱管理
+  /recipes/{id}/diff:
+    get:
+      description: O(n+m) 算法对比两个版本的配料和步骤差异，返回中文摘要
+      parameters:
+      - description: 菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 基准版本 ID
+        in: query
+        name: base_version_id
+        required: true
+        type: integer
+      - description: 对比版本 ID
+        in: query
+        name: target_version_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: base_version, target_version, diff
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 对比两个版本
+      tags:
+      - 版本管理
+  /recipes/{id}/diff/encyclopedia:
+    get:
+      description: 将菜谱当前版本与关联的百科菜谱进行对比
+      parameters:
+      - description: 菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 指定百科菜谱 ID（可选，默认用菜谱已关联的）
+        in: query
+        name: encyclopedia_recipe_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: encyclopedia_recipe_id, encyclopedia_name, encyclopedia_ingredients,
+            encyclopedia_process_steps, my_version, diff
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 与百科基准对比
+      tags:
+      - 版本管理
+  /recipes/{id}/permanent:
+    delete:
+      description: 彻底删除菜谱，不可恢复
+      parameters:
+      - description: 菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: 已彻底删除'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 菜谱不在回收站中
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 物理删除
+      tags:
+      - 回收站
+  /recipes/{id}/restore:
+    post:
+      description: 从回收站恢复已删除的菜谱
+      parameters:
+      - description: 菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: 已恢复'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 菜谱不在回收站中
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 恢复菜谱
+      tags:
+      - 回收站
+  /recipes/{id}/versions:
+    get:
+      description: 获取某个菜谱的所有历史版本，按版本号降序
+      parameters:
+      - description: 菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: versions
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 菜谱不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 版本历史列表
+      tags:
+      - 版本管理
+  /recipes/{id}/versions/{version_id}:
+    get:
+      description: 查看某个历史版本的完整配料和步骤
+      parameters:
+      - description: 菜谱 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 版本 ID
+        in: path
+        name: version_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: version
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 版本不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取某个版本详情
+      tags:
+      - 版本管理
+  /recipes/export:
+    get:
+      description: 导出当前用户所有菜谱（含当前版本完整数据）为 JSON
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: recipes
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 导出菜谱
+      tags:
+      - 导入导出
+  /recipes/import:
+    post:
+      consumes:
+      - application/json
+      description: 从 JSON 导入菜谱。按 name 去重：已存在则追加新版本，不存在则新建
+      parameters:
+      - description: '{\'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 导入菜谱
+      tags:
+      - 导入导出
+  /recipes/trash:
+    get:
+      description: 查看已删除的菜谱
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: items[], page_info
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 回收站列表
+      tags:
+      - 回收站
+  /tags:
+    get:
+      description: 获取全部标签（字典表）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: items
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 标签列表
+      tags:
+      - 标签管理
+    post:
+      consumes:
+      - application/json
+      description: 新增一个标签名称
+      parameters:
+      - description: '{\'
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: tag
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 名称不能为空
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 创建标签
+      tags:
+      - 标签管理
+  /tags/{id}:
+    delete:
+      description: 删除一个标签（同时清除关联关系）
+      parameters:
+      - description: 标签 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{}'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 标签不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 删除标签
+      tags:
+      - 标签管理
+  /upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 上传一张图片（JPG/PNG/WebP/GIF），最大 10MB。Vercel 环境自动使用 Blob 存储
+      parameters:
+      - description: 图片文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: url, filename, size
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 文件格式不支持或超过大小限制
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 上传单张图片
+      tags:
+      - 图片上传
+  /upload/batch:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 一次上传多张图片，返回全部上传结果
+      parameters:
+      - collectionFormat: csv
+        description: 图片文件数组
+        in: formData
+        items:
+          type: file
+        name: files
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: files
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 文件格式不支持
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 批量上传图片
+      tags:
+      - 图片上传
+produces:
+- application/json
+schemes:
+- http
+- https
+swagger: "2.0"
